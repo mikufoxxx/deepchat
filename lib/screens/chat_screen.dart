@@ -1,6 +1,5 @@
 import 'package:deepchat/screens/settings_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/chat_provider.dart';
 import '../services/storage_service.dart';
@@ -8,7 +7,6 @@ import '../services/api_service.dart';
 import '../widgets/chat_input.dart';
 import '../widgets/message_list.dart';
 import '../utils/error_handler.dart';
-import 'dart:ui';
 import '../widgets/chat_drawer.dart';
 
 class ChatScreen extends StatelessWidget {
@@ -19,41 +17,45 @@ class ChatScreen extends StatelessWidget {
     final provider = context.watch<ChatProvider>();
     final currentSession = provider.currentSession;
     
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(currentSession?.title ?? '新对话'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsScreen(),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      drawer: ChatDrawer(
-        chatSessions: provider.sessions,
-        currentSessionId: currentSession?.id,
-        onSessionSelected: provider.selectSession,
-        onNewChat: () {
-          provider.newChat();
-          Navigator.pop(context);
-        },
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: MessageList(
-              key: ValueKey(currentSession?.id ?? 'new'),
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      behavior: HitTestBehavior.translucent,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(currentSession?.title ?? '新对话'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
+                );
+              },
             ),
-          ),
-          const ChatInput(),
-        ],
+          ],
+        ),
+        drawer: ChatDrawer(
+          chatSessions: provider.sessions,
+          currentSessionId: currentSession?.id,
+          onSessionSelected: provider.selectSession,
+          onNewChat: () {
+            provider.newChat();
+            Navigator.pop(context);
+          },
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: MessageList(
+                key: ValueKey(currentSession?.id ?? 'new'),
+              ),
+            ),
+            const ChatInput(),
+          ],
+        ),
       ),
     );
   }

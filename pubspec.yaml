@@ -45,14 +45,16 @@ dependencies:
   # 已有的依赖
   image_picker: ^1.0.4
   http: ^1.1.0
-  provider: ^6.0.5
-  shared_preferences: ^2.2.0
+  provider: ^6.1.1
+  shared_preferences: ^2.2.2
   flutter_markdown: ^0.6.18
   url_launcher: ^6.2.5
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+
+  flutter_shaders: ^0.1.2
 
 dev_dependencies:
   flutter_test:
@@ -108,4 +110,10 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
   assets:
-    - assets/tessdata/
+    - lib/assets/img/bg.jpg
+
+
+  fonts:
+    - family: MajorMonoDisplay
+      fonts:
+        - asset: lib/assets/font/MajorMonoDisplay-Regular.ttf

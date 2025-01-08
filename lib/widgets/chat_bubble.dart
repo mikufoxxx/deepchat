@@ -35,8 +35,10 @@ class ChatBubble extends StatelessWidget {
     if (isUser) {
       messageContent = SelectableText(
         message.content,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: theme.brightness == Brightness.dark 
+              ? Colors.black87  // 深色主题下使用深色文字
+              : Colors.white,   // 浅色主题下使用白色文字
           fontSize: 15,
           height: 1.4,
         ),

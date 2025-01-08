@@ -16,10 +16,9 @@ class _ChatInputState extends State<ChatInput> with SingleTickerProviderStateMix
   final FocusNode _focusNode = FocusNode();
   bool _isComposing = false;
   bool _isFocused = false;
-  
+
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _blurAnimation;
 
   @override
   void initState() {
@@ -31,15 +30,7 @@ class _ChatInputState extends State<ChatInput> with SingleTickerProviderStateMix
     
     _scaleAnimation = Tween<double>(
       begin: 1.0,
-      end: 1.02,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
-    
-    _blurAnimation = Tween<double>(
-      begin: 10.0,
-      end: 15.0,
+      end: 1.01,
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeOutCubic,
@@ -80,31 +71,28 @@ class _ChatInputState extends State<ChatInput> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      child: AnimatedBuilder(
-        animation: _blurAnimation,
-        builder: (context, child) => BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: _blurAnimation.value,
-            sigmaY: _blurAnimation.value,
-          ),
+    final theme = Theme.of(context);
+    
+    return GestureDetector(
+      onTap: () => _focusNode.unfocus(),  // 点击空白处收起键盘
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
+              color: theme.colorScheme.surface.withOpacity(0.8),
               border: Border(
                 top: BorderSide(
-                  color: Colors.grey.withOpacity(0.2),
-                  width: 0.5,
+                  color: theme.colorScheme.outlineVariant.withOpacity(0.2),
                 ),
               ),
             ),
             padding: EdgeInsets.only(
-              left: 12,
-              right: 12,
+              left: 16,
+              right: 16,
               top: 12,
               bottom: MediaQuery.of(context).padding.bottom + 12,
             ),
-            height: MediaQuery.of(context).padding.bottom + 72,
             child: Row(
               children: [
                 Expanded(
@@ -112,27 +100,17 @@ class _ChatInputState extends State<ChatInput> with SingleTickerProviderStateMix
                     scale: _scaleAnimation,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(20),
+                        color: theme.colorScheme.surface.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(24),
                         border: Border.all(
                           color: _isFocused
-                              ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
-                              : Colors.grey.withOpacity(0.2),
+                              ? theme.colorScheme.primary.withOpacity(0.3)
+                              : theme.colorScheme.outlineVariant.withOpacity(0.2),
                           width: _isFocused ? 1.5 : 1,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _isFocused
-                                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                                : Colors.black.withOpacity(0.05),
-                            blurRadius: _isFocused ? 15 : 10,
-                            offset: const Offset(0, 2),
-                            spreadRadius: _isFocused ? 1 : 0,
-                          ),
-                        ],
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(24),
                         child: BackdropFilter(
                           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                           child: TextField(
@@ -146,15 +124,16 @@ class _ChatInputState extends State<ChatInput> with SingleTickerProviderStateMix
                             decoration: InputDecoration(
                               hintText: '输入消息...',
                               hintStyle: TextStyle(
-                                color: Colors.black54.withOpacity(0.6),
+                                color: theme.colorScheme.onSurface.withOpacity(0.5),
                               ),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 12,
                               ),
                               border: InputBorder.none,
-                              filled: true,
-                              fillColor: Colors.transparent,
+                            ),
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -162,42 +141,40 @@ class _ChatInputState extends State<ChatInput> with SingleTickerProviderStateMix
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 ScaleTransition(
                   scale: _scaleAnimation,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: _isComposing 
-                          ? Theme.of(context).colorScheme.primary.withOpacity(0.9)
-                          : Colors.white.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _isComposing
-                            ? Colors.transparent
-                            : Colors.grey.withOpacity(0.2),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _isComposing
-                              ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-                              : Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: _isComposing 
+                              ? theme.colorScheme.primary.withOpacity(0.9)
+                              : theme.colorScheme.surface.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: _isComposing
+                                ? Colors.transparent
+                                : theme.colorScheme.outlineVariant.withOpacity(0.2),
+                          ),
                         ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                        child: IconButton(
-                          onPressed: _isComposing ? _handleSubmitted : null,
-                          icon: Icon(
-                            Icons.send_rounded,
-                            color: _isComposing 
-                                ? Colors.white
-                                : Colors.grey.withOpacity(0.6),
-                            size: 20,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _isComposing ? _handleSubmitted : null,
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              child: Icon(
+                                Icons.send_rounded,
+                                size: 20,
+                                color: _isComposing 
+                                    ? theme.colorScheme.onPrimary
+                                    : theme.colorScheme.onSurface.withOpacity(0.5),
+                              ),
+                            ),
                           ),
                         ),
                       ),
