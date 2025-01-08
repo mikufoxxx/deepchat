@@ -30,10 +30,25 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # UI 相关
+  flutter_animate: ^4.5.0  # 强大的动画库
+  google_fonts: ^6.1.0    # Google 字体
+  flutter_spinkit: ^5.2.0 # 好看的加载动画
+  lottie: ^2.7.0         # Lottie动画支持
+  shimmer: ^3.0.0        # 闪光加载效果
+  animated_text_kit: ^4.2.2 # 文字动画
+  flutter_slidable: ^3.0.1  # 滑动操作
+  
+  # OCR
+  flutter_tesseract_ocr: ^0.4.23
+  
+  # 已有的依赖
+  image_picker: ^1.0.4
   http: ^1.1.0
   provider: ^6.0.5
   shared_preferences: ^2.2.0
   flutter_markdown: ^0.6.18
+  url_launcher: ^6.2.5
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -91,3 +106,6 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+  assets:
+    - assets/tessdata/

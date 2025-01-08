@@ -7,24 +7,17 @@ import 'services/storage_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final storage = await StorageService.init();
   
-  final storageService = await StorageService.initialize();
-  final apiService = ApiService(apiKey: storageService.getApiKey() ?? '');
-  
-  runApp(MyApp(
-    storageService: storageService,
-    apiService: apiService,
-  ));
+  runApp(MyApp(storage: storage));
 }
 
 class MyApp extends StatelessWidget {
-  final StorageService storageService;
-  final ApiService apiService;
+  final StorageService storage;
 
   const MyApp({
     super.key,
-    required this.storageService,
-    required this.apiService,
+    required this.storage,
   });
 
   @override
@@ -32,27 +25,14 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) => ChatProvider(
-            apiService: apiService,
-            storageService: storageService,
-          ),
+          create: (_) => ChatProvider(storage),
         ),
-        Provider.value(value: storageService),
       ],
       child: MaterialApp(
-        title: 'AI Chat App',
+        title: 'DeepChat',
         theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF6750A4),
-            brightness: Brightness.light,
-          ),
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-            scrolledUnderElevation: 0,
-          ),
-          scaffoldBackgroundColor: const Color(0xFFF8F8F8),
         ),
         home: const ChatScreen(),
       ),

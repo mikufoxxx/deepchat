@@ -1,40 +1,39 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/chat_session.dart';
 import '../models/chat_message.dart';
 
 class StorageService {
-  static const String _messageKey = 'chat_messages';
+  static const String _sessionsKey = 'chat_sessions';
   static const String _apiKeyKey = 'api_key';
+  static const String _favoriteMessagesKey = 'favorite_messages';
+
   final SharedPreferences _prefs;
 
-  StorageService._(this._prefs);
+  StorageService(this._prefs);
 
-  static Future<StorageService> initialize() async {
+  // 初始化
+  static Future<StorageService> init() async {
     final prefs = await SharedPreferences.getInstance();
-    return StorageService._(prefs);
+    return StorageService(prefs);
   }
 
-  // 保存消息历史
-  Future<void> saveMessages(List<ChatMessage> messages) async {
-    final List<Map<String, dynamic>> messageList = messages.map((message) => {
-          'content': message.content,
-          'role': message.role,
-          'timestamp': message.timestamp.toIso8601String(),
-        }).toList();
-
-    await _prefs.setString(_messageKey, jsonEncode(messageList));
+  // 保存会话列表
+  Future<void> saveSessions(List<ChatSession> sessions) async {
+    final sessionsJson = sessions.map((session) => session.toJson()).toList();
+    await _prefs.setString(_sessionsKey, jsonEncode(sessionsJson));
   }
 
-  // 加载消息历史
-  Future<List<ChatMessage>> loadMessages() async {
-    final String? messagesJson = _prefs.getString(_messageKey);
-    if (messagesJson == null) return [];
+  // 读取会话列表
+  List<ChatSession> loadSessions() {
+    final String? sessionsJson = _prefs.getString(_sessionsKey);
+    if (sessionsJson == null) return [];
 
     try {
-      final List<dynamic> messageList = jsonDecode(messagesJson);
-      return messageList.map((item) => ChatMessage.fromJson(item)).toList();
+      final List<dynamic> decoded = jsonDecode(sessionsJson);
+      return decoded.map((json) => ChatSession.fromJson(json)).toList();
     } catch (e) {
-      print('加载消息历史失败: $e');
+      print('加载会话失败: $e');
       return [];
     }
   }
@@ -44,23 +43,28 @@ class StorageService {
     await _prefs.setString(_apiKeyKey, apiKey);
   }
 
-  // 获取 API Key
+  // 读取 API Key
   String? getApiKey() {
     return _prefs.getString(_apiKeyKey);
   }
 
-  // 清除所有消息历史
-  Future<void> clearMessages() async {
-    await _prefs.remove(_messageKey);
+  // 保存收藏消息
+  Future<void> saveFavoriteMessages(List<ChatMessage> messages) async {
+    final messagesJson = messages.map((msg) => msg.toJson()).toList();
+    await _prefs.setString(_favoriteMessagesKey, jsonEncode(messagesJson));
   }
 
-  // 清除 API Key
-  Future<void> clearApiKey() async {
-    await _prefs.remove(_apiKeyKey);
-  }
+  // 读取收藏消息
+  List<ChatMessage> loadFavoriteMessages() {
+    final String? messagesJson = _prefs.getString(_favoriteMessagesKey);
+    if (messagesJson == null) return [];
 
-  // 清除所有数据
-  Future<void> clearAll() async {
-    await _prefs.clear();
+    try {
+      final List<dynamic> decoded = jsonDecode(messagesJson);
+      return decoded.map((json) => ChatMessage.fromJson(json)).toList();
+    } catch (e) {
+      print('加载收藏消息失败: $e');
+      return [];
+    }
   }
 } 

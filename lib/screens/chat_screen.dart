@@ -1,4 +1,6 @@
+import 'package:deepchat/screens/settings_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/chat_provider.dart';
 import '../services/storage_service.dart';
@@ -7,57 +9,51 @@ import '../widgets/chat_input.dart';
 import '../widgets/message_list.dart';
 import '../utils/error_handler.dart';
 import 'dart:ui';
+import '../widgets/chat_drawer.dart';
 
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<ChatProvider>();
+    final currentSession = provider.currentSession;
+    
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.7),
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              color: Colors.transparent,
-            ),
-          ),
-        ),
-        title: const Text(
-          'AI Chat',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        title: Text(currentSession?.title ?? '新对话'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => _showApiKeyDialog(context),
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
+            },
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFFE9E0FF).withOpacity(0.5),
-              const Color(0xFFFFFFFF),
-              const Color(0xFFE0F0FF).withOpacity(0.5),
-            ],
-          ),
-        ),
-        child: Column(
-          children: const [
-            Expanded(
-              child: MessageList(),
+      drawer: ChatDrawer(
+        chatSessions: provider.sessions,
+        currentSessionId: currentSession?.id,
+        onSessionSelected: provider.selectSession,
+        onNewChat: () {
+          provider.newChat();
+          Navigator.pop(context);
+        },
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: MessageList(
+              key: ValueKey(currentSession?.id ?? 'new'),
             ),
-            ChatInput(),
-          ],
-        ),
+          ),
+          const ChatInput(),
+        ],
       ),
     );
   }
@@ -114,7 +110,7 @@ class ChatScreen extends StatelessWidget {
                       context, 
                       listen: false
                     );
-                    chatProvider.updateApiService(apiService);
+                    chatProvider.updateApiService(apiService as String);
                     
                     ErrorHandler.showError(
                       context, 
