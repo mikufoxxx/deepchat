@@ -15,6 +15,9 @@
 - 📝 Markdown 渲染
 
 ## 截图
+![image](https://github.com/mikufoxxx/deepchat/blob/dev/img/chatpage.png)
+![image](https://github.com/mikufoxxx/deepchat/blob/dev/img/settingpage.png)
+![image](https://github.com/mikufoxxx/deepchat/blob/dev/img/favoritepage.png)
 
 
 ## 开始使用
