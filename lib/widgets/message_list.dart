@@ -6,112 +6,97 @@ import 'chat_bubble.dart';
 import 'dart:async';
 
 class MessageList extends StatefulWidget {
-  const MessageList({super.key});
+  final ScrollController? scrollController;
+
+  const MessageList({
+    super.key,
+    this.scrollController,
+  });
 
   @override
   State<MessageList> createState() => _MessageListState();
 }
 
 class _MessageListState extends State<MessageList> {
-  final ScrollController _scrollController = ScrollController();
-  bool _isNavigatingToMessage = false;
+  late ScrollController _scrollController;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = widget.scrollController ?? ScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkForTargetMessage();
+      _scrollToBottom();
     });
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   @override
   void didUpdateWidget(MessageList oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.scrollController != null && 
+        widget.scrollController != _scrollController) {
+      _scrollController = widget.scrollController!;
+    }
     _checkForTargetMessage();
   }
 
   void _checkForTargetMessage() {
-    if (!mounted) return;
-    
     final provider = context.read<ChatProvider>();
-    final targetMessage = provider.messageToScrollTo;
-    
-    if (targetMessage != null && !_isNavigatingToMessage) {
-      print('检测到目标消息: ${targetMessage.id}');
-      _isNavigatingToMessage = true;
-      
-      // 确保UI已经构建完成
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _scrollToTarget(targetMessage);
-        }
-      });
-    } else if (!_isNavigatingToMessage && provider.isStreaming) {
-      // 处理流式响应的滚动
+    if (provider.isStreaming) {
       _scrollToBottom();
     }
   }
 
-  void _scrollToTarget(ChatMessage targetMessage) {
-    if (!mounted || !_scrollController.hasClients) {
-      _isNavigatingToMessage = false;
-      return;
-    }
-
-    final messages = context.read<ChatProvider>().currentMessages;
-    final index = messages.indexWhere((m) => m.id == targetMessage.id);
-    
-    print('滚动到消息，索引: $index');
-    
-    if (index != -1) {
-      final targetOffset = index * 100.0;
-      
-      _scrollController.animateTo(
-        targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      ).then((_) {
-        if (mounted) {
-          _isNavigatingToMessage = false;
-          context.read<ChatProvider>().clearScrollTarget();
-        }
-      });
-    } else {
-      _isNavigatingToMessage = false;
-      context.read<ChatProvider>().clearScrollTarget();
-    }
-  }
-
-  void _scrollToBottom() {
-    if (!mounted || !_scrollController.hasClients) return;
-    
-    _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<ChatProvider>();
+    final messages = provider.currentMessages;
+    final theme = Theme.of(context);
+
+    if (messages.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Ciallo，我是DeepChat',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              '快来聊天吧~',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      itemCount: context.watch<ChatProvider>().currentMessages.length,
+      itemCount: messages.length,
+      padding: EdgeInsets.all(8),
       itemBuilder: (context, index) {
-        final message = context.watch<ChatProvider>().currentMessages[index];
-        final isLast = index == context.watch<ChatProvider>().currentMessages.length - 1;
-        
+        final message = messages[index];
         return ChatBubble(
-          key: ValueKey('message_${message.id}'),
           message: message,
-          isLast: isLast,
-          isFavorited: context.watch<ChatProvider>().isFavorited(message),
-          onFavorite: (message) {
-            context.read<ChatProvider>().toggleFavorite(message);
-          },
-          isComplete: !context.watch<ChatProvider>().isStreaming || !isLast,
-          isStreaming: context.watch<ChatProvider>().isStreaming && isLast,
+          onFavorite: provider.toggleFavorite,
+          isFavorited: provider.isFavorited(message),
+          onRegenerate: () => provider.regenerateMessage(),
         );
       },
     );
@@ -119,7 +104,9 @@ class _MessageListState extends State<MessageList> {
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    if (widget.scrollController == null) {
+      _scrollController.dispose();
+    }
     super.dispose();
   }
 } 

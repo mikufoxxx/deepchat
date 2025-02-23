@@ -343,26 +343,81 @@ class _FavoriteMessageDetailDialog extends StatelessWidget {
 class _BasicSettingsTab extends StatelessWidget {
   const _BasicSettingsTab({super.key});
 
-  Widget _buildApiKeyField(BuildContext context) {
-    final apiKey = context.read<ChatProvider>().apiKey;
-    final maskedKey = apiKey.isEmpty ? '' : _maskApiKey(apiKey);
-
-    return TextField(
-      decoration: const InputDecoration(
-        labelText: 'API Key',
-        hintText: '请输入您的 API Key',
-        border: OutlineInputBorder(),
+  Widget _buildApiSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final provider = context.watch<ChatProvider>();
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+        ),
       ),
-      onChanged: (value) {
-        context.read<ChatProvider>().setApiKey(value);
-      },
-      controller: TextEditingController(text: maskedKey),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '账户设置',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '硅基流动 API Key',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 14,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '在 docs.siliconflow.cn 获取',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: TextEditingController(text: provider.siliconflowApiKey),
+                onChanged: provider.updateSiliconflowApiKey,
+                decoration: InputDecoration(
+                  hintText: 'sf-xxxxxx',
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                style: const TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
-  }
-
-  String _maskApiKey(String key) {
-    if (key.length <= 12) return key;
-    return '${key.substring(0, 2)}********${key.substring(key.length - 2)}';
   }
 
   Widget _buildTemperatureSlider(BuildContext context) {
@@ -556,7 +611,7 @@ class _BasicSettingsTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        _buildApiKeyField(context),
+        _buildApiSection(context),
         const SizedBox(height: 24),
         const Text(
           '温度设置',
@@ -577,6 +632,16 @@ class _BasicSettingsTab extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         _buildThemeSection(context),
+        const SizedBox(height: 24),
+        const Text(
+          '模型设置',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildModelSection(context),
         const SizedBox(height: 24),
         const Text(
           '关于',
@@ -837,4 +902,46 @@ class TemperatureInfo extends StatelessWidget {
       ),
     );
   }
+}
+
+Widget _buildModelSection(BuildContext context) {
+  final theme = Theme.of(context);
+  final provider = context.watch<ChatProvider>();
+  
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '模型选择',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 16),
+        RadioListTile<String>(
+          title: const Text('DeepSeek Chat'),
+          value: 'deepseek',
+          groupValue: provider.selectedModel,
+          onChanged: (value) => provider.setModel(value!),
+        ),
+        RadioListTile<String>(
+          title: const Text('DeepSeek V3 (SiliconFlow)'),
+          value: 'siliconflow',
+          groupValue: provider.selectedModel,
+          onChanged: (value) => provider.setModel(value!),
+        ),
+      ],
+    ),
+  );
 } 

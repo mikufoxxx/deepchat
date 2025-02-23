@@ -1,42 +1,32 @@
 class ChatMessage {
   final String id;
-  final int sessionId;
-  final String content;
   final String role;
+  final String content;
+  final int sessionId;
+  final String? thoughtProcess;
+  final bool isThinking;
   final DateTime timestamp;
 
   bool get isUser => role == 'user';
 
   ChatMessage({
     required this.id,
-    required this.sessionId,
-    required this.content,
     required this.role,
+    required this.content,
+    required this.sessionId,
+    this.thoughtProcess,
+    this.isThinking = false,
     DateTime? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now();
-
-  ChatMessage copyWith({
-    String? id,
-    int? sessionId,
-    String? content,
-    String? role,
-    DateTime? timestamp,
-  }) {
-    return ChatMessage(
-      id: id ?? this.id,
-      sessionId: sessionId ?? this.sessionId,
-      content: content ?? this.content,
-      role: role ?? this.role,
-      timestamp: timestamp ?? this.timestamp,
-    );
-  }
+  }) : this.timestamp = timestamp ?? DateTime.now();
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'sessionId': sessionId,
-      'content': content,
       'role': role,
+      'content': content,
+      'sessionId': sessionId,
+      'thoughtProcess': thoughtProcess,
+      'isThinking': isThinking,
       'timestamp': timestamp.toIso8601String(),
     };
   }
@@ -44,10 +34,32 @@ class ChatMessage {
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     return ChatMessage(
       id: json['id'],
-      sessionId: json['sessionId'],
-      content: json['content'],
       role: json['role'],
+      content: json['content'],
+      sessionId: json['sessionId'],
+      thoughtProcess: json['thoughtProcess'],
+      isThinking: json['isThinking'] ?? false,
       timestamp: DateTime.parse(json['timestamp']),
+    );
+  }
+
+  ChatMessage copyWith({
+    String? id,
+    String? role,
+    String? content,
+    int? sessionId,
+    String? thoughtProcess,
+    bool? isThinking,
+    DateTime? timestamp,
+  }) {
+    return ChatMessage(
+      id: id ?? this.id,
+      role: role ?? this.role,
+      content: content ?? this.content,
+      sessionId: sessionId ?? this.sessionId,
+      thoughtProcess: thoughtProcess ?? this.thoughtProcess,
+      isThinking: isThinking ?? this.isThinking,
+      timestamp: timestamp ?? this.timestamp,
     );
   }
 

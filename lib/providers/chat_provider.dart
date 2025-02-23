@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import '../models/chat_message.dart';
 import '../models/chat_session.dart';
 import '../screens/chat_screen.dart';
+import '../screens/settings_screen.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
+import '../config/api_config.dart';
 
 class ChatProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -17,9 +19,17 @@ class ChatProvider with ChangeNotifier {
   String _apiKey = '';
   bool _isStreaming = false;
   ChatMessage? _messageToScrollTo;
+  String _selectedModel = 'siliconflow';  // 默认使用硅基流动
+  String _baseUrl = ApiConfig.siliconFlowUrl;  // 默认使用硅基流动的 URL
+  bool _isDeepThinking = false;
+  String _deepseekApiKey = '';
+  String _siliconflowApiKey = '';
+  Map<String, int> _thinkingDurations = {};
 
   ChatProvider(this._storage) {
     _loadData();
+    _apiService.updateBaseUrl(_baseUrl);
+    _apiService.updateModel(currentModel);
   }
 
   // Getters
@@ -42,7 +52,7 @@ class ChatProvider with ChangeNotifier {
     if (_sessions.isEmpty) return null;
     return _sessions.firstWhere(
       (session) => session.id == _currentSessionId,
-      orElse: () => _sessions.first,
+      orElse: () => _sessions.last,
     );
   }
 
@@ -50,11 +60,15 @@ class ChatProvider with ChangeNotifier {
   List<ChatMessage> get currentMessages => currentSession?.messages ?? [];
 
   // 加载保存的数据
-  Future<void> _loadData() async {
+  void _loadData() async {
     _sessions = _storage.loadSessions();
     _favoriteMessages = _storage.loadFavoriteMessages();
-    _apiKey = _storage.getApiKey() ?? '';
+    _apiKey = await _storage.getApiKey() ?? '';
+    _deepseekApiKey = _apiKey;
+    _siliconflowApiKey = _apiKey;
+    _apiService.updateApiKey(_apiKey);
     
+    // 只在没有会话时创建新会话
     if (_sessions.isEmpty) {
       newChat();
     } else {
@@ -75,8 +89,10 @@ class ChatProvider with ChangeNotifier {
 
   // 选择会话
   void selectSession(int id) {
-    _currentSessionId = id;
-    notifyListeners();
+    if (_sessions.any((session) => session.id == id)) {
+      _currentSessionId = id;
+      notifyListeners();
+    }
   }
 
   // 新建会话
@@ -85,14 +101,7 @@ class ChatProvider with ChangeNotifier {
     final newSession = ChatSession(
       id: newSessionId,
       title: '新对话',
-      messages: [
-        ChatMessage(
-          id: 'welcome_$newSessionId',
-          role: 'assistant',
-          content: '你好！很高兴见到你。有什么我可以帮忙的吗？',
-          sessionId: newSessionId,
-        ),
-      ],
+      messages: [],
     );
     
     _sessions.add(newSession);
@@ -117,26 +126,64 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      String accumulatedResponse = '';
-      var session = currentSession;  // 使用 var 而不是 final
+      String thoughtProcess = '';
+      String response = '';
+      final startTime = DateTime.now();
+      var session = currentSession;
       if (session == null) return;
       
       final messages = [...session.messages];
+      bool isThinkingMode = _isDeepThinking;
+      
+      var lastNotifyTime = DateTime.now();
       
       await for (final chunk in _apiService.getChatCompletionStream(
         messages, 
         _apiKey ?? '', 
         _temperature,
       )) {
-        accumulatedResponse += chunk;
-        final aiMessage = ChatMessage(
-          id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
-          role: 'assistant',
-          content: accumulatedResponse,
-          sessionId: _currentSessionId!,
-        );
-        _updateLastMessage(aiMessage);
-        notifyListeners();
+        if (DateTime.now().difference(lastNotifyTime).inMilliseconds > 100) {
+          notifyListeners();
+          lastNotifyTime = DateTime.now();
+        }
+        
+        if (chunk.startsWith('思考过程：')) {
+          thoughtProcess += chunk.substring(5);
+          final aiMessage = ChatMessage(
+            id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+            role: 'assistant',
+            content: thoughtProcess,
+            isThinking: true,
+            sessionId: _currentSessionId!,
+            timestamp: startTime,
+            thoughtProcess: thoughtProcess,
+          );
+          _updateLastMessage(aiMessage);
+        } else if (chunk == '\n\n回答：') {
+          response = '';
+          final aiMessage = ChatMessage(
+            id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+            role: 'assistant',
+            content: '',
+            isThinking: false,
+            sessionId: _currentSessionId!,
+            timestamp: startTime,
+            thoughtProcess: thoughtProcess,
+          );
+          _updateLastMessage(aiMessage);
+        } else {
+          response += chunk;
+          final aiMessage = ChatMessage(
+            id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+            role: 'assistant',
+            content: response,
+            isThinking: false,
+            sessionId: _currentSessionId!,
+            timestamp: startTime,
+            thoughtProcess: isThinkingMode ? thoughtProcess : null,
+          );
+          _updateLastMessage(aiMessage);
+        }
       }
 
       // 重新获取当前会话
@@ -196,27 +243,31 @@ class ChatProvider with ChangeNotifier {
   void updateApiService(String value) => setApiKey(value);
 
   void deleteSession(int sessionId) {
+    // 如果删除的是当前会话，先找到要切换的会话
+    if (_currentSessionId == sessionId) {
+      final remainingSessions = _sessions.where((s) => s.id != sessionId).toList();
+      if (remainingSessions.isNotEmpty) {
+        _currentSessionId = remainingSessions.last.id;
+      } else {
+        // 如果没有其他会话，先创建一个新会话
+        final newSession = ChatSession(
+          id: DateTime.now().millisecondsSinceEpoch,
+          title: '新对话',
+          messages: [],
+        );
+        _sessions.add(newSession);
+        _currentSessionId = newSession.id;
+      }
+    }
+
     // 删除收藏消息
     _favoriteMessages.removeWhere((message) => message.sessionId == sessionId);
     
     // 删除会话
     _sessions.removeWhere((session) => session.id == sessionId);
     
-    // 如果删除的是当前会话
-    if (currentSession?.id == sessionId) {
-      if (_sessions.isNotEmpty) {
-        // 如果还有其他会话，选择最后一个会话
-        selectSession(_sessions.last.id);
-      } else {
-        // 如果没有任何会话了，创建新会话
-        newChat();
-      }
-    }
-    
-    // 保存更新
-    _saveFavoriteMessages();
     _saveSessions();
-    
+    _saveFavoriteMessages();
     notifyListeners();
   }
 
@@ -228,10 +279,11 @@ class ChatProvider with ChangeNotifier {
   }
 
   // 重命名会话
-  void renameSession(int id, String newTitle) {
-    final index = _sessions.indexWhere((session) => session.id == id);
-    if (index >= 0) {
-      _sessions[index] = _sessions[index].copyWith(title: newTitle);
+  void renameSession(int sessionId, String newTitle) {
+    final index = _sessions.indexWhere((session) => session.id == sessionId);
+    if (index != -1) {
+      final updatedSession = _sessions[index].copyWith(title: newTitle);
+      _sessions[index] = updatedSession;
       _saveSessions();
       notifyListeners();
     }
@@ -303,35 +355,41 @@ class ChatProvider with ChangeNotifier {
   }
 
   void _updateLastMessage(ChatMessage message) {
-    print('_updateLastMessage - 当前会话ID: $_currentSessionId'); // 调试日志
-    final session = _sessions.firstWhere(
-      (s) => s.id == _currentSessionId,
-    );
+    if (_currentSessionId == null) return;
 
-    final updatedMessages = [...session.messages];
-    print('_updateLastMessage - 更新前消息数: ${updatedMessages.length}'); // 调试日志
-
-    if (updatedMessages.length >= 2) {
-      // 保留用户消息，只更新AI回复
-      final lastMessage = updatedMessages[updatedMessages.length - 1];
-      if (lastMessage.role == 'assistant') {
-        updatedMessages[updatedMessages.length - 1] = message;
-      } else {
-        updatedMessages.add(message);
+    // 计算当前思考时间
+    if (message.thoughtProcess != null) {
+      final currentDuration = DateTime.now().difference(message.timestamp).inSeconds;
+      
+      // 如果是思考中，持续更新时间
+      if (message.isThinking) {
+        _thinkingDurations[message.id] = currentDuration;
+      } 
+      // 如果思考完毕且没有记录最终时间，记录最终时间
+      else if (!_thinkingDurations.containsKey(message.id)) {
+        _thinkingDurations[message.id] = currentDuration;
       }
-    } else {
-      updatedMessages.add(message);
     }
 
-    print('_updateLastMessage - 更新后消息数: ${updatedMessages.length}'); // 调试日志
-    final updatedSession = session.copyWith(messages: updatedMessages);
-
-    _sessions = _sessions.map((s) => 
-      s.id == session.id ? updatedSession : s
-    ).toList();
+    _sessions = _sessions.map((session) {
+      if (session.id == _currentSessionId) {
+        final messages = List<ChatMessage>.from(session.messages);
+        if (messages.isNotEmpty && messages.last.role == 'assistant') {
+          messages[messages.length - 1] = message;
+        } else {
+          messages.add(message);
+        }
+        return session.copyWith(messages: messages);
+      }
+      return session;
+    }).toList();
 
     _saveSessions();
     notifyListeners();
+  }
+
+  Future<void> _saveToStorage() async {
+    await _saveSessions();
   }
 
   Future<void> _generateTitle(ChatSession session) async {
@@ -353,4 +411,111 @@ class ChatProvider with ChangeNotifier {
       print('生成标题失败: $e'); // 调试日志
     }
   }
+
+  String get selectedModel => _selectedModel;
+  String get baseUrl => _baseUrl;
+  
+  void setModel(String model) {
+    _selectedModel = model;
+    _baseUrl = ApiConfig.siliconFlowUrl;
+    _apiService.updateBaseUrl(_baseUrl);
+    _apiService.updateModel(currentModel);
+    
+    // 检查 API Key
+    if (_siliconflowApiKey.isEmpty) {
+      throw Exception('请先在设置中配置硅基流动 API Key');
+    }
+    
+    _apiService.updateApiKey(_siliconflowApiKey);
+    notifyListeners();
+  }
+
+  bool get isDeepThinking => _isDeepThinking;
+  
+  void toggleDeepThinking() {
+    _isDeepThinking = !_isDeepThinking;
+    _apiService.updateModel(currentModel);
+    notifyListeners();
+  }
+  
+  String get currentModel {
+    return _isDeepThinking 
+        ? ApiConfig.models['siliconflow_r1']!
+        : ApiConfig.models['siliconflow']!;
+  }
+
+  String get deepseekApiKey => _deepseekApiKey;
+  String get siliconflowApiKey => _siliconflowApiKey;
+  
+  void updateDeepseekApiKey(String key) {
+    _deepseekApiKey = key;
+    if (_selectedModel == 'deepseek') {
+      _apiService.updateApiKey(key);
+    }
+    _storage.saveApiKey(key);
+    notifyListeners();
+  }
+  
+  void updateSiliconflowApiKey(String key) {
+    _siliconflowApiKey = key;
+    if (_selectedModel == 'siliconflow') {
+      _apiService.updateApiKey(key);
+    }
+    _storage.saveApiKey(key);
+    notifyListeners();
+  }
+
+  bool get hasValidApiKey => _siliconflowApiKey.isNotEmpty;
+
+  void checkAndShowApiKeyReminder(BuildContext context) {
+    if (_siliconflowApiKey.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('请先配置硅基流动 API Key'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: '去设置',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> regenerateMessage() async {
+    if (_currentSessionId == null || _isStreaming) return;
+    
+    final session = currentSession;
+    if (session == null || session.messages.isEmpty) return;
+    
+    // 移除最后一条AI消息
+    final lastMessage = session.messages.last;
+    if (lastMessage.role != 'assistant') return;
+    
+    _sessions = _sessions.map((s) {
+      if (s.id == _currentSessionId) {
+        return s.copyWith(
+          messages: s.messages.sublist(0, s.messages.length - 1),
+        );
+      }
+      return s;
+    }).toList();
+    
+    notifyListeners();
+    
+    // 重新发送最后一条用户消息
+    final lastUserMessage = session.messages
+        .lastWhere((msg) => msg.role == 'user');
+    await sendMessage(lastUserMessage.content);
+  }
+
+  int getThinkingDuration(String messageId) => _thinkingDurations[messageId] ?? 0;
 }

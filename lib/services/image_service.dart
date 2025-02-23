@@ -5,9 +5,13 @@ import '../config/api_config.dart';
 
 class ImageService {
   final String apiKey;
+  final String baseUrl;
   final _picker = ImagePicker();
 
-  ImageService({required this.apiKey});
+  ImageService({
+    required this.apiKey,
+    required this.baseUrl,
+  });
 
   Future<String?> pickAndUploadImage() async {
     try {
@@ -18,9 +22,9 @@ class ImageService {
 
       if (image == null) return null;
 
-      // 上传图片到 Deepseek API
+      // 上传图片到 API
       final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/vision/text'),
+        Uri.parse('$baseUrl/vision/text'),
         headers: {
           'Authorization': 'Bearer $apiKey',
         },
