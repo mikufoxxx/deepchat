@@ -9,42 +9,31 @@ import '../widgets/message_list.dart';
 import '../utils/error_handler.dart';
 import '../widgets/chat_drawer.dart';
 
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
-
-  @override
-  State<ChatScreen> createState() => _ChatScreenState();
-}
-
-class _ChatScreenState extends State<ChatScreen> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ChatProvider>().checkAndShowApiKeyReminder(context);
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChatProvider>();
     final currentSession = provider.currentSession;
-    final scrollController = ScrollController();
+    final isWideScreen = MediaQuery.of(context).size.width > 900;
 
-    // 自动滚动到底部
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (scrollController.hasClients) {
-        scrollController.animateTo(
-          scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    final chatDrawer = ChatDrawer(
+      chatSessions: provider.sessions,
+      currentSessionId: currentSession?.id,
+      onSessionSelected: (id) => provider.selectSession(id),
+      onNewChat: () => provider.newChat(),
+    );
 
     return Scaffold(
       appBar: AppBar(
         title: Text(currentSession?.title ?? '新对话'),
+        leading: isWideScreen ? null : Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.model_training),
@@ -55,38 +44,32 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
               );
             },
           ),
         ],
       ),
-      drawer: ChatDrawer(
-        chatSessions: provider.sessions,
-        currentSessionId: currentSession?.id,
-        onSessionSelected: provider.selectSession,
-        onNewChat: () {
-          provider.newChat();
-          Navigator.pop(context);
-        },
-      ),
-      body: Column(
+      body: Row(
         children: [
+          if (isWideScreen)
+            SizedBox(
+              width: 280,
+              child: chatDrawer,
+            ),
           Expanded(
-            child: GestureDetector(
-              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-              behavior: HitTestBehavior.translucent,
-              child: MessageList(
-                key: ValueKey(currentSession?.id ?? 'new'),
-                scrollController: scrollController,
-              ),
+            child: Column(
+              children: [
+                Expanded(
+                  child: MessageList(),
+                ),
+                const ChatInput(),
+              ],
             ),
           ),
-          const ChatInput(),
         ],
       ),
+      drawer: isWideScreen ? null : chatDrawer,
     );
   }
 
