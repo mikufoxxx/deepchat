@@ -33,45 +33,59 @@ class _ChatInputState extends State<ChatInput> {
 
     return Container(
       color: theme.colorScheme.surface.withOpacity(0.8),
-      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.fromLTRB(12, 8, 12, 16 + MediaQuery.of(context).viewInsets.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(
-            controller: _controller,
-            focusNode: _focusNode,
-            keyboardType: TextInputType.multiline,
-            maxLines: null,
-            onChanged: (text) {
-              setState(() {
-                _isComposing = text.trim().isNotEmpty;
-              });
-            },
-            decoration: InputDecoration(
-              hintText: '输入消息...',
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 6,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(24),
-                borderSide: BorderSide(
-                  color: _isFocused
-                      ? theme.colorScheme.primary.withOpacity(0.3)
-                      : theme.colorScheme.outlineVariant.withOpacity(0.2),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 40,
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    keyboardType: TextInputType.multiline,
+                    maxLines: 1,
+                    style: TextStyle(fontSize: 14),
+                    onChanged: (text) {
+                      setState(() {
+                        _isComposing = text.trim().isNotEmpty;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: '输入消息...',
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide(
+                          color: _isFocused
+                              ? theme.colorScheme.primary.withOpacity(0.3)
+                              : theme.colorScheme.outlineVariant.withOpacity(0.2),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(width: 8),
+              _buildSendButton(context),
+            ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               GestureDetector(
                 onTap: () => provider.toggleDeepThinking(),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                    horizontal: 12,
+                    vertical: 8,
                   ),
                   decoration: BoxDecoration(
                     color: provider.isDeepThinking 
@@ -89,16 +103,16 @@ class _ChatInputState extends State<ChatInput> {
                     children: [
                       Icon(
                         Icons.psychology,
-                        size: 14,
+                        size: 16,
                         color: provider.isDeepThinking
                             ? theme.colorScheme.primary
                             : theme.colorScheme.onSurfaceVariant,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 6),
                       Text(
                         '深度思考',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 13,
                           color: provider.isDeepThinking
                               ? theme.colorScheme.primary
                               : theme.colorScheme.onSurfaceVariant,
@@ -108,22 +122,21 @@ class _ChatInputState extends State<ChatInput> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
               GestureDetector(
                 onTap: () => _showModelSelectionDialog(context),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                    horizontal: 12,
+                    vertical: 8,
                   ),
                   decoration: BoxDecoration(
                     color: provider.isPro 
-                        ? theme.colorScheme.tertiaryContainer.withOpacity(0.7)
+                        ? theme.colorScheme.primaryContainer.withOpacity(0.7)
                         : theme.colorScheme.surfaceVariant.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: provider.isPro
-                          ? theme.colorScheme.tertiary.withOpacity(0.3)
+                          ? theme.colorScheme.primary.withOpacity(0.3)
                           : theme.colorScheme.outlineVariant.withOpacity(0.2),
                     ),
                   ),
@@ -132,18 +145,18 @@ class _ChatInputState extends State<ChatInput> {
                     children: [
                       Icon(
                         Icons.model_training,
-                        size: 14,
+                        size: 16,
                         color: provider.isPro
-                            ? theme.colorScheme.tertiary
+                            ? theme.colorScheme.primary
                             : theme.colorScheme.onSurfaceVariant,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 6),
                       Text(
                         provider.isPro ? 'Pro' : '标准版',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 13,
                           color: provider.isPro
-                              ? theme.colorScheme.tertiary
+                              ? theme.colorScheme.primary
                               : theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
@@ -151,8 +164,6 @@ class _ChatInputState extends State<ChatInput> {
                   ),
                 ),
               ),
-              const Spacer(),
-              _buildSendButton(context),
             ],
           ),
         ],
@@ -164,44 +175,30 @@ class _ChatInputState extends State<ChatInput> {
     final theme = Theme.of(context);
     
     return Container(
+      height: 40,
+      width: 40,
       decoration: BoxDecoration(
         color: _isComposing 
             ? theme.colorScheme.primary 
             : theme.colorScheme.surfaceVariant,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _isComposing
+              ? theme.colorScheme.primary.withOpacity(0.3)
+              : theme.colorScheme.outlineVariant.withOpacity(0.2),
+        ),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: _isComposing ? _handleSubmit : null,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 6,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.send,
-                  size: 14,
-                  color: _isComposing 
-                      ? theme.colorScheme.onPrimary
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '发送',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _isComposing 
-                        ? theme.colorScheme.onPrimary
-                        : theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
+          borderRadius: BorderRadius.circular(20),
+          child: Icon(
+            Icons.send,
+            size: 20,
+            color: _isComposing 
+                ? theme.colorScheme.onPrimary
+                : theme.colorScheme.onSurfaceVariant,
           ),
         ),
       ),
