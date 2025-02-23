@@ -5,9 +5,10 @@ class ApiConfig {
   
   // 模型配置
   static const Map<String, String> models = {
-    'deepseek': 'deepseek-chat',
-    'siliconflow': 'Pro/deepseek-ai/DeepSeek-V3',
-    'siliconflow_r1': 'Pro/deepseek-ai/DeepSeek-R1',
+    'deepseek_v3': 'deepseek-ai/DeepSeek-V3',
+    'deepseek_v3_pro': 'Pro/deepseek-ai/DeepSeek-V3',
+    'deepseek_r1': 'deepseek-ai/DeepSeek-R1',
+    'deepseek_r1_pro': 'Pro/deepseek-ai/DeepSeek-R1',
   };
   
   // API 相关配置

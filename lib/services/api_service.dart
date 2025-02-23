@@ -9,10 +9,12 @@ import '../models/user_info.dart';
 class ApiService {
   String _baseUrl = ApiConfig.deepseekUrl;
   String? _apiKey;
-  String _currentModel = ApiConfig.models['deepseek']!;
+  String _currentModel = ApiConfig.models['deepseek'] ?? '';
   final _httpClient = http.Client();
 
-  ApiService({String? apiKey}) : _apiKey = apiKey;
+  ApiService({String? apiKey}) {
+    _apiKey = apiKey;
+  }
 
   void updateApiKey(String apiKey) {
     _apiKey = apiKey;

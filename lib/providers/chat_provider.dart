@@ -13,7 +13,7 @@ import '../config/api_config.dart';
 import '../models/user_info.dart';
 
 class ChatProvider with ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  late final ApiService _apiService;
   final StorageService _storage;
   List<ChatSession> _sessions = [];
   int _currentSessionId = 0;
@@ -30,8 +30,12 @@ class ChatProvider with ChangeNotifier {
   Map<String, int> _thinkingDurations = {};
   StreamSubscription<String>? _streamSubscription;
   String _lastUsedModel = 'siliconflow';  // 默认使用硅基流动
+  bool _isPro = false;
+  String _modelVersion = 'v3'; // 'v3' 或 'r1'
+  final Map<String, bool> _completedMessages = {};
 
   ChatProvider(this._storage) {
+    _apiService = ApiService();
     _loadData();
     _apiService.updateBaseUrl(_baseUrl);
     _apiService.updateModel(currentModel);
@@ -173,50 +177,60 @@ class ChatProvider with ChangeNotifier {
         messages, 
         _apiKey ?? '', 
         _temperature,
-      ).listen((chunk) {
-        if (DateTime.now().difference(lastNotifyTime).inMilliseconds > 100) {
-          notifyListeners();
-          lastNotifyTime = DateTime.now();
-        }
-        
-        if (chunk.startsWith('思考过程：')) {
-          thoughtProcess += chunk.substring(5);
-          final aiMessage = ChatMessage(
-            id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
-            role: 'assistant',
-            content: thoughtProcess,
-            isThinking: true,
-            sessionId: _currentSessionId!,
-            timestamp: startTime,
-            thoughtProcess: thoughtProcess,
-          );
-          _updateLastMessage(aiMessage);
-        } else if (chunk == '\n\n回答：') {
-          response = '';
-          final aiMessage = ChatMessage(
-            id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
-            role: 'assistant',
-            content: '',
-            isThinking: false,
-            sessionId: _currentSessionId!,
-            timestamp: startTime,
-            thoughtProcess: thoughtProcess,
-          );
-          _updateLastMessage(aiMessage);
-        } else {
-          response += chunk;
-          final aiMessage = ChatMessage(
-            id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
-            role: 'assistant',
-            content: response,
-            isThinking: false,
-            sessionId: _currentSessionId!,
-            timestamp: startTime,
-            thoughtProcess: thoughtProcess,
-          );
-          _updateLastMessage(aiMessage);
-        }
-      });
+      ).listen(
+        (chunk) {
+          if (DateTime.now().difference(lastNotifyTime).inMilliseconds > 100) {
+            notifyListeners();
+            lastNotifyTime = DateTime.now();
+          }
+          
+          if (chunk.startsWith('思考过程：')) {
+            thoughtProcess += chunk.substring(5);
+            final aiMessage = ChatMessage(
+              id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+              role: 'assistant',
+              content: thoughtProcess,
+              isThinking: true,
+              sessionId: _currentSessionId!,
+              timestamp: startTime,
+              thoughtProcess: thoughtProcess,
+            );
+            _updateLastMessage(aiMessage);
+          } else if (chunk == '\n\n回答：') {
+            response = '';
+            final aiMessage = ChatMessage(
+              id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+              role: 'assistant',
+              content: '',
+              isThinking: false,
+              sessionId: _currentSessionId!,
+              timestamp: startTime,
+              thoughtProcess: thoughtProcess,
+            );
+            _updateLastMessage(aiMessage);
+          } else {
+            response += chunk;
+            final aiMessage = ChatMessage(
+              id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+              role: 'assistant',
+              content: response,
+              isThinking: false,
+              sessionId: _currentSessionId!,
+              timestamp: startTime,
+              thoughtProcess: thoughtProcess,
+            );
+            _updateLastMessage(aiMessage);
+          }
+        },
+        onDone: () {
+          // 标记最后一条消息为完成状态
+          final lastMessage = currentSession?.messages.last;
+          if (lastMessage != null) {
+            _completedMessages[lastMessage.id] = true;
+            notifyListeners();
+          }
+        },
+      );
 
       // 重新获取当前会话
       session = _sessions.firstWhere(
@@ -464,9 +478,13 @@ class ChatProvider with ChangeNotifier {
   }
   
   String get currentModel {
-    return _isDeepThinking 
-        ? ApiConfig.models['siliconflow_r1']!
-        : ApiConfig.models['siliconflow']!;
+    final baseModel = _isDeepThinking 
+        ? 'deepseek-ai/DeepSeek-R1'    // 深度思考模式使用 R1
+        : 'deepseek-ai/DeepSeek-V3';   // 普通模式使用 V3
+    
+    return _isPro 
+        ? 'Pro/$baseModel'   // 专业版添加 Pro 前缀
+        : baseModel;         // 标准版直接使用基础模型
   }
 
   String get deepseekApiKey => _deepseekApiKey;
@@ -549,5 +567,29 @@ class ChatProvider with ChangeNotifier {
       throw Exception('请先配置 API Key');
     }
     return await _apiService.getUserInfo();
+  }
+
+  bool get isPro => _isPro;
+  String get modelVersion => _modelVersion;
+  
+  void togglePro() {
+    _isPro = !_isPro;
+    _apiService.updateModel(currentModel);
+    notifyListeners();
+  }
+  
+  void setModelVersion(String version) {
+    _modelVersion = version;
+    _apiService.updateModel(currentModel);
+    notifyListeners();
+  }
+
+  bool isMessageCompleted(String messageId) {
+    return _completedMessages[messageId] ?? false;
+  }
+
+  void resetMessageCompletion(String messageId) {
+    _completedMessages.remove(messageId);
+    notifyListeners();
   }
 }

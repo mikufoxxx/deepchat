@@ -75,71 +75,97 @@ class _ChatInputState extends State<ChatInput> {
               ),
               const SizedBox(height: 6),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildDeepThinkingButton(context),
+                  GestureDetector(
+                    onTap: () => provider.toggleDeepThinking(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: provider.isDeepThinking 
+                            ? theme.colorScheme.primaryContainer.withOpacity(0.7)
+                            : theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: provider.isDeepThinking
+                              ? theme.colorScheme.primary.withOpacity(0.3)
+                              : theme.colorScheme.outlineVariant.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.psychology,
+                            size: 14,
+                            color: provider.isDeepThinking
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '深度思考',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: provider.isDeepThinking
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => _showModelSelectionDialog(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: provider.isPro 
+                            ? theme.colorScheme.tertiaryContainer.withOpacity(0.7)
+                            : theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: provider.isPro
+                              ? theme.colorScheme.tertiary.withOpacity(0.3)
+                              : theme.colorScheme.outlineVariant.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.model_training,
+                            size: 14,
+                            color: provider.isPro
+                                ? theme.colorScheme.tertiary
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            provider.isPro ? 'Pro' : '标准版',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: provider.isPro
+                                  ? theme.colorScheme.tertiary
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
                   _buildSendButton(context),
                 ],
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDeepThinkingButton(BuildContext context) {
-    final theme = Theme.of(context);
-    final provider = context.watch<ChatProvider>();
-    
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => provider.toggleDeepThinking(),
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 6,
-              ),
-              decoration: BoxDecoration(
-                color: provider.isDeepThinking 
-                    ? theme.colorScheme.primaryContainer.withOpacity(0.7)
-                    : theme.colorScheme.surfaceVariant.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: provider.isDeepThinking
-                      ? theme.colorScheme.primary.withOpacity(0.3)
-                      : theme.colorScheme.outlineVariant.withOpacity(0.2),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.psychology,
-                    size: 14,
-                    color: provider.isDeepThinking
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '深度思考',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: provider.isDeepThinking
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
       ),
@@ -203,6 +229,43 @@ class _ChatInputState extends State<ChatInput> {
         _isComposing = false;
       });
     }
+  }
+
+  void _showModelSelectionDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    final provider = context.read<ChatProvider>();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('选择模型版本'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<bool>(
+              title: const Text('标准版'),
+              subtitle: const Text('使用免费和付费额度'),
+              value: false,
+              groupValue: provider.isPro,
+              onChanged: (value) {
+                provider.togglePro();
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<bool>(
+              title: const Text('专业版'),
+              subtitle: const Text('仅消耗付费额度'),
+              value: true, 
+              groupValue: provider.isPro,
+              onChanged: (value) {
+                provider.togglePro();
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
