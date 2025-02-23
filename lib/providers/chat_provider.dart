@@ -68,12 +68,21 @@ class ChatProvider with ChangeNotifier {
     _siliconflowApiKey = _apiKey;
     _apiService.updateApiKey(_apiKey);
     
-    // 只在没有会话时创建新会话
+    // 检查最新的会话是否为空
+    if (_sessions.isNotEmpty) {
+      final latestSession = _sessions.last;
+      if (latestSession.messages.isEmpty) {
+        _sessions.removeLast();
+      }
+    }
+    
+    // 如果没有会话，创建新会话
     if (_sessions.isEmpty) {
       newChat();
     } else {
-      _currentSessionId = _sessions.first.id;
+      _currentSessionId = _sessions.last.id;
     }
+    
     notifyListeners();
   }
 
@@ -97,6 +106,17 @@ class ChatProvider with ChangeNotifier {
 
   // 新建会话
   void newChat() {
+    // 检查当前会话是否为空
+    final currentSession = _sessions.firstWhere(
+      (session) => session.id == _currentSessionId,
+      orElse: () => ChatSession(id: -1, title: '', messages: []),
+    );
+    
+    // 如果当前会话没有消息，直接删除它
+    if (currentSession.messages.isEmpty && currentSession.id != -1) {
+      _sessions.removeWhere((session) => session.id == currentSession.id);
+    }
+
     final newSessionId = DateTime.now().millisecondsSinceEpoch;
     final newSession = ChatSession(
       id: newSessionId,
