@@ -708,7 +708,7 @@ class _BasicSettingsTab extends StatelessWidget {
             theme,
             icon: Icons.info_outline,
             label: '版本',
-            value: '1.0.0',
+            value: '1.1.0',
           ),
           _buildAboutItem(
             theme,
