@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/theme_provider.dart';
+import '../models/user_info.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -368,55 +369,145 @@ class _BasicSettingsTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '硅基流动 API Key',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
+          FutureBuilder<UserInfo>(
+            future: provider.getUserInfo(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              
+              if (snapshot.hasError) {
+                return Column(
+                  children: [
+                    _buildApiKeyInput(context, provider, theme),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Text(
+                        '获取用户信息失败: ${snapshot.error}',
+                        style: TextStyle(color: theme.colorScheme.error),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              final userInfo = snapshot.data!;
+              return Column(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 14,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '在 docs.siliconflow.cn 获取',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.primary,
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.account_balance_wallet_outlined,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '账户余额',
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurface,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '¥ ${userInfo.balance.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                color: theme.colorScheme.primary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            userInfo.status,
+                            style: TextStyle(
+                              color: theme.colorScheme.onPrimaryContainer,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  _buildApiKeyInput(context, provider, theme),
                 ],
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: TextEditingController(text: provider.siliconflowApiKey),
-                onChanged: provider.updateSiliconflowApiKey,
-                decoration: InputDecoration(
-                  hintText: 'sf-xxxxxx',
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                style: const TextStyle(fontSize: 14),
-              ),
-            ],
+              );
+            },
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildApiKeyInput(BuildContext context, ChatProvider provider, ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '硅基流动 API Key',
+          style: TextStyle(
+            fontSize: 14,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 14,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '在 docs.siliconflow.cn 获取',
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: TextEditingController(text: provider.siliconflowApiKey),
+          onChanged: provider.updateSiliconflowApiKey,
+          decoration: InputDecoration(
+            hintText: 'sf-xxxxxx',
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          style: const TextStyle(fontSize: 14),
+        ),
+      ],
     );
   }
 
@@ -632,16 +723,6 @@ class _BasicSettingsTab extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         _buildThemeSection(context),
-        const SizedBox(height: 24),
-        const Text(
-          '模型设置',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildModelSection(context),
         const SizedBox(height: 24),
         const Text(
           '关于',

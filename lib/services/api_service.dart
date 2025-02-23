@@ -4,6 +4,7 @@ import '../models/chat_message.dart';
 import '../config/api_config.dart';
 import '../providers/chat_provider.dart';
 import 'package:provider/provider.dart';
+import '../models/user_info.dart';
 
 class ApiService {
   String _baseUrl = ApiConfig.deepseekUrl;
@@ -31,7 +32,6 @@ class ApiService {
   ) async* {
     final endpoint = '$_baseUrl/chat/completions';
     bool isThinking = false;
-    String thoughtBuffer = '';
     
     try {
       final request = http.Request('POST', Uri.parse(endpoint));
@@ -56,9 +56,9 @@ class ApiService {
       final response = await http.Client().send(request);
 
       if (response.statusCode != 200) {
-        final error = await response.stream.bytesToString();
-        print('API错误响应: $error');
-        throw Exception('API调用失败: ${response.statusCode} - $error');
+        print('API错误响应: ${await response.stream.bytesToString()}');
+        yield '抱歉，我现在有点累，请稍后再试~';
+        return;
       }
 
       await for (final chunk in response.stream.transform(utf8.decoder)) {
@@ -73,8 +73,6 @@ class ApiService {
           if (line == '[DONE]') continue;
           try {
             final data = jsonDecode(line);
-            print('解析后的数据: $data');
-            
             final content = data['choices']?[0]?['delta']?['content'] as String?;
             final reasoningContent = data['choices']?[0]?['delta']?['reasoning_content'] as String?;
 
@@ -100,7 +98,7 @@ class ApiService {
       }
     } catch (e) {
       print('流处理错误: $e');
-      throw Exception('API调用错误: $e');
+      yield '抱歉，我遇到了一点小问题，请稍后再试~';
     }
   }
 
@@ -148,5 +146,32 @@ class ApiService {
       print('标题生成错误: $e');
       throw Exception('生成标题错误: $e');
     }
+  }
+
+  Future<UserInfo> getUserInfo() async {
+    if (_apiKey == null) {
+      throw Exception('API Key 未配置');
+    }
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/user/info'),
+      headers: {
+        'Authorization': 'Bearer $_apiKey',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      if (jsonResponse['code'] == 20000 && jsonResponse['status'] == true) {
+        final data = jsonResponse['data'];
+        return UserInfo(
+          balance: double.parse(data['totalBalance'] ?? '0'),
+          status: data['status'] ?? '未知',
+          model: data['role'] ?? 'user',
+        );
+      }
+      throw Exception('获取用户信息失败: ${jsonResponse['message']}');
+    }
+    throw Exception('获取用户信息失败: ${response.statusCode}');
   }
 } 

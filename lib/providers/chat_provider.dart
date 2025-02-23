@@ -8,6 +8,7 @@ import '../screens/settings_screen.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../config/api_config.dart';
+import '../models/user_info.dart';
 
 class ChatProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -538,4 +539,11 @@ class ChatProvider with ChangeNotifier {
   }
 
   int getThinkingDuration(String messageId) => _thinkingDurations[messageId] ?? 0;
+
+  Future<UserInfo> getUserInfo() async {
+    if (_siliconflowApiKey.isEmpty) {
+      throw Exception('请先配置 API Key');
+    }
+    return await _apiService.getUserInfo();
+  }
 }
