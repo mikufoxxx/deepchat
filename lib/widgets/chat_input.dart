@@ -11,8 +11,8 @@ class ChatInput extends StatefulWidget {
 }
 
 class _ChatInputState extends State<ChatInput> {
-  final TextEditingController _controller = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
   bool _isComposing = false;
   bool _isFocused = false;
 
@@ -28,146 +28,134 @@ class _ChatInputState extends State<ChatInput> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ChatProvider>();
     final theme = Theme.of(context);
+    final provider = context.watch<ChatProvider>();
 
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          color: theme.colorScheme.surface.withOpacity(0.8),
-          padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + MediaQuery.of(context).padding.bottom),
-          child: Column(
-            children: [
-              ClipRRect(
+    return Container(
+      color: theme.colorScheme.surface.withOpacity(0.8),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            keyboardType: TextInputType.multiline,
+            maxLines: null,
+            onChanged: (text) {
+              setState(() {
+                _isComposing = text.trim().isNotEmpty;
+              });
+            },
+            decoration: InputDecoration(
+              hintText: '输入消息...',
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 6,
+              ),
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(24),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: _isFocused
-                            ? theme.colorScheme.primary.withOpacity(0.3)
-                            : theme.colorScheme.outlineVariant.withOpacity(0.2),
-                      ),
+                borderSide: BorderSide(
+                  color: _isFocused
+                      ? theme.colorScheme.primary.withOpacity(0.3)
+                      : theme.colorScheme.outlineVariant.withOpacity(0.2),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => provider.toggleDeepThinking(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: provider.isDeepThinking 
+                        ? theme.colorScheme.primaryContainer.withOpacity(0.7)
+                        : theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: provider.isDeepThinking
+                          ? theme.colorScheme.primary.withOpacity(0.3)
+                          : theme.colorScheme.outlineVariant.withOpacity(0.2),
                     ),
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      onChanged: (text) {
-                        setState(() {
-                          _isComposing = text.trim().isNotEmpty;
-                        });
-                      },
-                      decoration: InputDecoration(
-                        hintText: '输入消息...',
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 6,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.psychology,
+                        size: 14,
+                        color: provider.isDeepThinking
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '深度思考',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: provider.isDeepThinking
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
                         ),
-                        border: InputBorder.none,
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => provider.toggleDeepThinking(),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: provider.isDeepThinking 
-                            ? theme.colorScheme.primaryContainer.withOpacity(0.7)
-                            : theme.colorScheme.surfaceVariant.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: provider.isDeepThinking
-                              ? theme.colorScheme.primary.withOpacity(0.3)
-                              : theme.colorScheme.outlineVariant.withOpacity(0.2),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.psychology,
-                            size: 14,
-                            color: provider.isDeepThinking
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '深度思考',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: provider.isDeepThinking
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => _showModelSelectionDialog(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: provider.isPro 
+                        ? theme.colorScheme.tertiaryContainer.withOpacity(0.7)
+                        : theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: provider.isPro
+                          ? theme.colorScheme.tertiary.withOpacity(0.3)
+                          : theme.colorScheme.outlineVariant.withOpacity(0.2),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => _showModelSelectionDialog(context),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.model_training,
+                        size: 14,
+                        color: provider.isPro
+                            ? theme.colorScheme.tertiary
+                            : theme.colorScheme.onSurfaceVariant,
                       ),
-                      decoration: BoxDecoration(
-                        color: provider.isPro 
-                            ? theme.colorScheme.tertiaryContainer.withOpacity(0.7)
-                            : theme.colorScheme.surfaceVariant.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
+                      const SizedBox(width: 4),
+                      Text(
+                        provider.isPro ? 'Pro' : '标准版',
+                        style: TextStyle(
+                          fontSize: 12,
                           color: provider.isPro
-                              ? theme.colorScheme.tertiary.withOpacity(0.3)
-                              : theme.colorScheme.outlineVariant.withOpacity(0.2),
+                              ? theme.colorScheme.tertiary
+                              : theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.model_training,
-                            size: 14,
-                            color: provider.isPro
-                                ? theme.colorScheme.tertiary
-                                : theme.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            provider.isPro ? 'Pro' : '标准版',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: provider.isPro
-                                  ? theme.colorScheme.tertiary
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
-                  const Spacer(),
-                  _buildSendButton(context),
-                ],
+                ),
               ),
+              const Spacer(),
+              _buildSendButton(context),
             ],
           ),
-        ),
+        ],
       ),
     );
   }

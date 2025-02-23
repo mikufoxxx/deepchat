@@ -42,50 +42,50 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     });
 
-    return GestureDetector(
-      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-      behavior: HitTestBehavior.translucent,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(currentSession?.title ?? '新对话'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.model_training),
-              onPressed: () => _showModelSelectionDialog(context),
-            ),
-            IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-        drawer: ChatDrawer(
-          chatSessions: provider.sessions,
-          currentSessionId: currentSession?.id,
-          onSessionSelected: provider.selectSession,
-          onNewChat: () {
-            provider.newChat();
-            Navigator.pop(context);
-          },
-        ),
-        body: Column(
-          children: [
-            Expanded(
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(currentSession?.title ?? '新对话'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.model_training),
+            onPressed: () => _showModelSelectionDialog(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      drawer: ChatDrawer(
+        chatSessions: provider.sessions,
+        currentSessionId: currentSession?.id,
+        onSessionSelected: provider.selectSession,
+        onNewChat: () {
+          provider.newChat();
+          Navigator.pop(context);
+        },
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+              behavior: HitTestBehavior.translucent,
               child: MessageList(
                 key: ValueKey(currentSession?.id ?? 'new'),
                 scrollController: scrollController,
               ),
             ),
-            const ChatInput(),
-          ],
-        ),
+          ),
+          const ChatInput(),
+        ],
       ),
     );
   }
