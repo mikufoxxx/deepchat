@@ -7,6 +7,7 @@ class StorageService {
   static const String _sessionsKey = 'chat_sessions';
   static const String _apiKeyKey = 'api_key';
   static const String _favoriteMessagesKey = 'favorite_messages';
+  static const String _lastUsedModelKey = 'last_used_model';
 
   final SharedPreferences _prefs;
 
@@ -66,5 +67,13 @@ class StorageService {
       print('加载收藏消息失败: $e');
       return [];
     }
+  }
+
+  Future<String?> getLastUsedModel() async {
+    return _prefs.getString(_lastUsedModelKey);
+  }
+
+  Future<void> saveLastUsedModel(String model) async {
+    await _prefs.setString(_lastUsedModelKey, model);
   }
 } 

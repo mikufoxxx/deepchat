@@ -10,6 +10,7 @@ class ApiService {
   String _baseUrl = ApiConfig.deepseekUrl;
   String? _apiKey;
   String _currentModel = ApiConfig.models['deepseek']!;
+  final _httpClient = http.Client();
 
   ApiService({String? apiKey}) : _apiKey = apiKey;
 
@@ -53,7 +54,7 @@ class ApiService {
       
       print('请求参数: $jsonBody');
       request.body = jsonBody;
-      final response = await http.Client().send(request);
+      final response = await _httpClient.send(request);
 
       if (response.statusCode != 200) {
         print('API错误响应: ${await response.stream.bytesToString()}');
@@ -149,29 +150,40 @@ class ApiService {
   }
 
   Future<UserInfo> getUserInfo() async {
-    if (_apiKey == null) {
-      throw Exception('API Key 未配置');
-    }
+    final endpoint = '$_baseUrl/user/info';
+    final client = http.Client();
+    
+    try {
+      final response = await client.get(
+        Uri.parse(endpoint),
+        headers: {
+          'accept': 'application/json',
+          'authorization': 'Bearer $_apiKey',
+        },
+      );
 
-    final response = await http.get(
-      Uri.parse('$_baseUrl/user/info'),
-      headers: {
-        'Authorization': 'Bearer $_apiKey',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      if (jsonResponse['code'] == 20000 && jsonResponse['status'] == true) {
-        final data = jsonResponse['data'];
-        return UserInfo(
-          balance: double.parse(data['totalBalance'] ?? '0'),
-          status: data['status'] ?? '未知',
-          model: data['role'] ?? 'user',
-        );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('用户信息响应: $data');
+        
+        if (data['is_subscribed'] is bool) {
+          data['is_subscribed'] = data['is_subscribed'].toString();
+        }
+        
+        return UserInfo.fromJson(data);
+      } else {
+        print('获取用户信息失败: ${response.body}');
+        throw Exception('获取用户信息失败: ${response.statusCode}');
       }
-      throw Exception('获取用户信息失败: ${jsonResponse['message']}');
+    } catch (e) {
+      print('获取用户信息错误: $e');
+      throw Exception('获取用户信息失败，请检查网络连接');
+    } finally {
+      client.close();
     }
-    throw Exception('获取用户信息失败: ${response.statusCode}');
+  }
+
+  void dispose() {
+    _httpClient.close();
   }
 } 

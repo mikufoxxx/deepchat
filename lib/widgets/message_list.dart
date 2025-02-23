@@ -96,7 +96,7 @@ class _MessageListState extends State<MessageList> {
           message: message,
           onFavorite: provider.toggleFavorite,
           isFavorited: provider.isFavorited(message),
-          onRegenerate: () => provider.regenerateMessage(),
+          onRegenerate: () => provider.retryMessage(),
         );
       },
     );

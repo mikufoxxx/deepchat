@@ -393,65 +393,11 @@ class _BasicSettingsTab extends StatelessWidget {
 
               final userInfo = snapshot.data!;
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.account_balance_wallet_outlined,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '账户余额',
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '¥ ${userInfo.balance.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                color: theme.colorScheme.primary,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            userInfo.status,
-                            style: TextStyle(
-                              color: theme.colorScheme.onPrimaryContainer,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
                   _buildApiKeyInput(context, provider, theme),
+                  const SizedBox(height: 16),
+                  _buildBalanceInfo(userInfo, theme),
                 ],
               );
             },
@@ -861,6 +807,59 @@ class _BasicSettingsTab extends StatelessWidget {
     }
 
     return content;
+  }
+
+  Widget _buildBalanceInfo(UserInfo userInfo, ThemeData theme) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildBalanceCard(
+            '免费额度',
+            userInfo.balance,
+            theme,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildBalanceCard(
+            '付费额度',
+            userInfo.chargeBalance,
+            theme,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBalanceCard(String title, double amount, ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '¥ ${amount.toStringAsFixed(4)}',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

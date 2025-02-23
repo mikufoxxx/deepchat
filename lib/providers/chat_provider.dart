@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +28,8 @@ class ChatProvider with ChangeNotifier {
   String _deepseekApiKey = '';
   String _siliconflowApiKey = '';
   Map<String, int> _thinkingDurations = {};
+  StreamSubscription<String>? _streamSubscription;
+  String _lastUsedModel = 'siliconflow';  // 默认使用硅基流动
 
   ChatProvider(this._storage) {
     _loadData();
@@ -67,6 +71,9 @@ class ChatProvider with ChangeNotifier {
     _apiKey = await _storage.getApiKey() ?? '';
     _deepseekApiKey = _apiKey;
     _siliconflowApiKey = _apiKey;
+    _lastUsedModel = await _storage.getLastUsedModel() ?? 'siliconflow';
+    _selectedModel = _lastUsedModel;
+    _apiService.updateModel(currentModel);
     _apiService.updateApiKey(_apiKey);
     
     // 检查最新的会话是否为空
@@ -98,8 +105,11 @@ class ChatProvider with ChangeNotifier {
   }
 
   // 选择会话
+  @override
   void selectSession(int id) {
     if (_sessions.any((session) => session.id == id)) {
+      _streamSubscription?.cancel();
+      _isStreaming = false;
       _currentSessionId = id;
       notifyListeners();
     }
@@ -133,6 +143,7 @@ class ChatProvider with ChangeNotifier {
 
   // 发送消息
   Future<void> sendMessage(String content) async {
+    _streamSubscription?.cancel();
     if (_currentSessionId == null) return;
 
     final userMessage = ChatMessage(
@@ -158,11 +169,11 @@ class ChatProvider with ChangeNotifier {
       
       var lastNotifyTime = DateTime.now();
       
-      await for (final chunk in _apiService.getChatCompletionStream(
+      _streamSubscription = _apiService.getChatCompletionStream(
         messages, 
         _apiKey ?? '', 
         _temperature,
-      )) {
+      ).listen((chunk) {
         if (DateTime.now().difference(lastNotifyTime).inMilliseconds > 100) {
           notifyListeners();
           lastNotifyTime = DateTime.now();
@@ -201,11 +212,11 @@ class ChatProvider with ChangeNotifier {
             isThinking: false,
             sessionId: _currentSessionId!,
             timestamp: startTime,
-            thoughtProcess: isThinkingMode ? thoughtProcess : null,
+            thoughtProcess: thoughtProcess,
           );
           _updateLastMessage(aiMessage);
         }
-      }
+      });
 
       // 重新获取当前会话
       session = _sessions.firstWhere(
@@ -438,16 +449,9 @@ class ChatProvider with ChangeNotifier {
   
   void setModel(String model) {
     _selectedModel = model;
-    _baseUrl = ApiConfig.siliconFlowUrl;
-    _apiService.updateBaseUrl(_baseUrl);
+    _lastUsedModel = model;
+    _storage.saveLastUsedModel(model);
     _apiService.updateModel(currentModel);
-    
-    // 检查 API Key
-    if (_siliconflowApiKey.isEmpty) {
-      throw Exception('请先在设置中配置硅基流动 API Key');
-    }
-    
-    _apiService.updateApiKey(_siliconflowApiKey);
     notifyListeners();
   }
 
@@ -511,20 +515,21 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  Future<void> regenerateMessage() async {
+  Future<void> retryMessage() async {
     if (_currentSessionId == null || _isStreaming) return;
     
     final session = currentSession;
     if (session == null || session.messages.isEmpty) return;
     
-    // 移除最后一条AI消息
+    // 移除最后一条AI消息和对应的用户消息
     final lastMessage = session.messages.last;
     if (lastMessage.role != 'assistant') return;
     
     _sessions = _sessions.map((s) {
       if (s.id == _currentSessionId) {
+        // 删除最后两条消息（用户消息和AI回复）
         return s.copyWith(
-          messages: s.messages.sublist(0, s.messages.length - 1),
+          messages: s.messages.sublist(0, s.messages.length - 2),
         );
       }
       return s;
@@ -533,8 +538,7 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
     
     // 重新发送最后一条用户消息
-    final lastUserMessage = session.messages
-        .lastWhere((msg) => msg.role == 'user');
+    final lastUserMessage = session.messages[session.messages.length - 2];
     await sendMessage(lastUserMessage.content);
   }
 

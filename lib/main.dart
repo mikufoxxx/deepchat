@@ -5,8 +5,18 @@ import 'providers/chat_provider.dart';
 import 'services/api_service.dart';
 import 'services/storage_service.dart';
 import 'providers/theme_provider.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 void main() async {
+  SystemChrome.setSystemUIOverlayStyle(
+    SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+    ),
+  );
+  
   WidgetsFlutterBinding.ensureInitialized();
   final storage = await StorageService.init();
   
@@ -51,6 +61,18 @@ class MyApp extends StatelessWidget {
                   ? ThemeMode.dark
                   : ThemeMode.light,
           home: const ChatScreen(),
+          builder: (context, child) {
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle(
+                systemNavigationBarColor: Colors.transparent,
+                systemNavigationBarDividerColor: Colors.transparent,
+                systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light 
+                    ? Brightness.dark 
+                    : Brightness.light,
+              ),
+              child: child!,
+            );
+          },
         );
       },
     );
