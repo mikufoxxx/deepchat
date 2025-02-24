@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../models/chat_message.dart';
 import '../models/chat_session.dart';
 import '../providers/chat_provider.dart';
-import '../widgets/favorite_message_dialog.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -687,57 +687,64 @@ class _BasicSettingsTab extends StatelessWidget {
   Widget _buildAboutSection(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withOpacity(0.5),
-        ),
-      ),
-      child: Column(
-        children: [
-          _buildAboutItem(
-            theme,
-            icon: Icons.person_outline,
-            label: '作者',
-            value: '狐狸ox',
+    return FutureBuilder<PackageInfo>(
+      future: PackageInfo.fromPlatform(),
+      builder: (context, snapshot) {
+        final version = snapshot.hasData ? snapshot.data!.version : '1.0.0';
+        
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+            ),
           ),
-          _buildAboutItem(
-            theme,
-            icon: Icons.info_outline,
-            label: '版本',
-            value: '1.1.0',
+          child: Column(
+            children: [
+              _buildAboutItem(
+                theme,
+                icon: Icons.person_outline,
+                label: '作者',
+                value: '狐狸ox',
+              ),
+              _buildAboutItem(
+                theme,
+                icon: Icons.info_outline,
+                label: '版本',
+                value: version,
+              ),
+              _buildAboutItem(
+                theme,
+                icon: Icons.code_rounded,
+                label: '项目地址',
+                value: '查看源代码',
+                onTap: () async {
+                  const url = 'https://github.com/mikufoxxx/deepchat';
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('无法打开链接')),
+                      );
+                    }
+                  }
+                },
+              ),
+              _buildAboutItem(
+                theme,
+                icon: Icons.gavel_outlined,
+                label: '许可证',
+                value: 'MIT License',
+                isLast: true,
+              ),
+            ],
           ),
-          _buildAboutItem(
-            theme,
-            icon: Icons.code_rounded,
-            label: '项目地址',
-            value: '查看源代码',
-            onTap: () async {
-              const url = 'https://github.com/mikufoxxx/deepchat';
-              final uri = Uri.parse(url);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri);
-              } else {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('无法打开链接')),
-                  );
-                }
-              }
-            },
-          ),
-          _buildAboutItem(
-            theme,
-            icon: Icons.gavel_outlined,
-            label: '许可证',
-            value: 'MIT License',
-            isLast: true,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

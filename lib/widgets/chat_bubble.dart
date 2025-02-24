@@ -66,11 +66,12 @@ class ChatBubble extends StatelessWidget {
 
   Widget _buildAssistantMessage(BuildContext context) {
     final theme = Theme.of(context);
+    final provider = context.watch<ChatProvider>();
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (message.isThinking || message.thoughtProcess != null)
+        if (provider.isDeepThinking && message.thoughtProcess != null)
           ThinkingSection(message: message),
         if (!message.isThinking)
           Container(
