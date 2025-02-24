@@ -23,6 +23,7 @@ class ChatScreen extends StatelessWidget {
       currentSessionId: currentSession?.id,
       onSessionSelected: (id) => provider.selectSession(id),
       onNewChat: () => provider.newChat(),
+      isWideScreen: isWideScreen,
     );
 
     return Scaffold(

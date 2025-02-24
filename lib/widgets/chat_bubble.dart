@@ -72,7 +72,7 @@ class ChatBubble extends StatelessWidget {
       children: [
         if (message.isThinking || message.thoughtProcess != null)
           ThinkingSection(message: message),
-        if (!message.isThinking)  // 只在非思考状态显示回复内容
+        if (!message.isThinking)
           Container(
             width: MediaQuery.of(context).size.width * 0.95,
             padding: EdgeInsets.all(12),
@@ -86,9 +86,13 @@ class ChatBubble extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                MarkdownBody(
-                  data: message.content,
-                  selectable: true,
+                SelectableText(
+                  message.content,
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.5,
+                    color: theme.colorScheme.onSurface,
+                  ),
                 ),
                 if (!message.isUser)
                   _buildMessageActions(context),
