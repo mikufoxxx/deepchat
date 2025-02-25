@@ -9,12 +9,12 @@ class MessageList extends StatefulWidget {
   final ScrollController? scrollController;
 
   const MessageList({
-    super.key,
+    Key? key,
     this.scrollController,
-  });
+  }) : super(key: key);
 
   @override
-  State<MessageList> createState() => _MessageListState();
+  _MessageListState createState() => _MessageListState();
 }
 
 class _MessageListState extends State<MessageList> {
@@ -24,36 +24,30 @@ class _MessageListState extends State<MessageList> {
   void initState() {
     super.initState();
     _scrollController = widget.scrollController ?? ScrollController();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
   }
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
-      Future.microtask(() {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-        );
-      });
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
     }
   }
 
   @override
   void didUpdateWidget(MessageList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.scrollController != null && 
-        widget.scrollController != _scrollController) {
-      _scrollController = widget.scrollController!;
-    }
-    
-    // 每次消息更新时都滚动到底部
     final provider = context.read<ChatProvider>();
-    if (provider.isStreaming || provider.currentMessages.isNotEmpty) {
+    
+    if (provider.shouldScrollToBottom || provider.isStreaming) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToBottom();
+        if (provider.shouldScrollToBottom) {
+          provider.setShouldScrollToBottom(false);
+        }
       });
     }
   }
@@ -94,11 +88,15 @@ class _MessageListState extends State<MessageList> {
       padding: EdgeInsets.all(8),
       itemBuilder: (context, index) {
         final message = messages[index];
+        final isLast = index == messages.length - 1;
         return ChatBubble(
           message: message,
+          isLast: isLast,
           onFavorite: provider.toggleFavorite,
           isFavorited: provider.isFavorited(message),
           onRegenerate: () => provider.retryMessage(),
+          isComplete: provider.isMessageCompleted(message.id),
+          isStreaming: provider.isStreaming && isLast,
         );
       },
     );

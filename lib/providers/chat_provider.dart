@@ -35,6 +35,7 @@ class ChatProvider with ChangeNotifier {
   final Map<String, bool> _completedMessages = {};
   DateTime _lastNotifyTime = DateTime.now();
   bool _isResponding = false;
+  bool _shouldScrollToBottom = false;
 
   ChatProvider(this._storage) {
     _apiService = ApiService();
@@ -117,6 +118,7 @@ class ChatProvider with ChangeNotifier {
       _streamSubscription?.cancel();
       _isStreaming = false;
       _currentSessionId = id;
+      _shouldScrollToBottom = true;
       notifyListeners();
     }
   }
@@ -623,4 +625,11 @@ class ChatProvider with ChangeNotifier {
   }
 
   bool get isResponding => _isResponding;
+
+  bool get shouldScrollToBottom => _shouldScrollToBottom;
+
+  void setShouldScrollToBottom(bool value) {
+    _shouldScrollToBottom = value;
+    notifyListeners();
+  }
 }
