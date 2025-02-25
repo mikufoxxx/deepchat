@@ -113,7 +113,6 @@ class ChatProvider with ChangeNotifier {
   }
 
   // 选择会话
-  @override
   void selectSession(int id) {
     if (_sessions.any((session) => session.id == id)) {
       _streamSubscription?.cancel();
@@ -245,7 +244,7 @@ class ChatProvider with ChangeNotifier {
         id: 'error_${DateTime.now().millisecondsSinceEpoch}',
         role: 'assistant',
         content: '抱歉，发生了错误：$e',
-        sessionId: _currentSessionId!,
+        sessionId: _currentSessionId,
       );
       _addMessage(errorMessage);
       _isResponding = false;  // 发生错误时也要重置状态
@@ -381,7 +380,7 @@ class ChatProvider with ChangeNotifier {
     final session = _sessions.firstWhere(
       (s) => s.id == _currentSessionId,
       orElse: () => ChatSession(
-        id: _currentSessionId!,
+        id: _currentSessionId,
         title: '新对话',
         messages: [],
       ),
@@ -401,9 +400,6 @@ class ChatProvider with ChangeNotifier {
   }
 
   void _updateLastMessage(ChatMessage message) {
-    if (_currentSessionId == null) return;
-
-    // 添加模型信息和思考过程
     final messageWithModel = message.copyWith(
       model: _modelVersion,
       thoughtProcess: _modelVersion == 'r1' ? message.thoughtProcess : null,
@@ -426,9 +422,6 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _saveToStorage() async {
-    await _saveSessions();
-  }
 
   bool _shouldGenerateTitle(ChatSession session) {
     // 只有当会话有两条消息(一问一答)且标题是默认的"新对话"时才生成
@@ -439,9 +432,7 @@ class ChatProvider with ChangeNotifier {
   }
 
   Future<void> _generateTitle(ChatSession session) async {
-    if (_currentSessionId == null) return;
-    
-    if (session == null || !_shouldGenerateTitle(session)) return;
+    if (!_shouldGenerateTitle(session)) return;
 
     // 构建用于生成标题的消息
     final titleMessages = [
@@ -449,7 +440,7 @@ class ChatProvider with ChangeNotifier {
         id: 'system_${DateTime.now().millisecondsSinceEpoch}',
         role: 'system',
         content: '请根据用户的问题生成一个简短的标题（不超过15个字）。不要加引号，不要解释。',
-        sessionId: _currentSessionId!,
+        sessionId: _currentSessionId,
         timestamp: DateTime.now(),
       ),
       session.messages[0], // 用户的问题
@@ -477,7 +468,7 @@ class ChatProvider with ChangeNotifier {
       _apiService.updateModel(originalModel);
       
       // 更新会话标题
-      renameSession(_currentSessionId!, title.trim());
+      renameSession(_currentSessionId, title.trim());
     } catch (e) {
       print('生成标题失败: $e');
     }
@@ -560,7 +551,7 @@ class ChatProvider with ChangeNotifier {
   }
 
   Future<void> retryMessage() async {
-    if (_currentSessionId == null || _isStreaming) return;
+    if (_isStreaming) return;
     
     final session = currentSession;
     if (session == null || session.messages.isEmpty) return;

@@ -2,8 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/chat_message.dart';
 import '../config/api_config.dart';
-import '../providers/chat_provider.dart';
-import 'package:provider/provider.dart';
 import '../models/user_info.dart';
 
 class ApiService {

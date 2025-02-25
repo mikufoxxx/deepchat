@@ -13,7 +13,6 @@ class CircularRevealClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final center = centerOffset;
-    final minSize = size.width > size.height ? size.height : size.width;
     final maxRadius = sqrt(size.width * size.width + size.height * size.height);
     final radius = maxRadius * fraction;
     
