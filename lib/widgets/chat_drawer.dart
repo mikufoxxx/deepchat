@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/chat_provider.dart';
-import '../screens/settings_screen.dart';
 import '../models/chat_session.dart';
 import 'package:collection/collection.dart';
 
@@ -27,19 +26,24 @@ class ChatDrawer extends StatelessWidget {
     
     // 对会话按时间分组
     final groupedSessions = groupBy(
-      chatSessions.reversed, // 反转顺序，最新的在前
+      chatSessions.reversed,
       (ChatSession session) {
         final now = DateTime.now();
         final sessionTime = DateTime.fromMillisecondsSinceEpoch(session.id);
-        final difference = now.difference(sessionTime);
+        
+        // 转换为日期（去掉时间部分）
+        final sessionDate = DateTime(sessionTime.year, sessionTime.month, sessionTime.day);
+        final today = DateTime(now.year, now.month, now.day);
+        
+        final difference = today.difference(sessionDate).inDays;
 
-        if (difference.inDays == 0) {
+        if (difference == 0) {
           return '今天';
-        } else if (difference.inDays == 1) {
+        } else if (difference == 1) {
           return '昨天';
-        } else if (difference.inDays <= 7) {
+        } else if (difference <= 7) {
           return '最近7天';
-        } else if (difference.inDays <= 30) {
+        } else if (difference <= 30) {
           return '最近30天';
         } else {
           return '更早';
@@ -179,35 +183,6 @@ class ChatDrawer extends StatelessWidget {
                   if (!isWideScreen) {
                     Navigator.pop(context);
                   }
-                },
-              ),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.settings_outlined,
-                    size: 20,
-                  ),
-                ),
-                title: Text(
-                  '设置',
-                  style: TextStyle(
-                    fontFamily: 'Noto Sans',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SettingsScreen(),
-                    ),
-                  );
                 },
               ),
             ],
