@@ -92,13 +92,17 @@ class ChatProvider with ChangeNotifier {
       }
     }
     
-    // 如果没有会话，创建新会话
-    if (_sessions.isEmpty) {
-      newChat();
-    } else {
-      _currentSessionId = _sessions.last.id;
-    }
+    // 无论是否有其他会话，都创建新会话
+    final newSessionId = DateTime.now().millisecondsSinceEpoch;
+    final newSession = ChatSession(
+      id: newSessionId,
+      title: '新对话',
+      messages: [],
+    );
+    _sessions.add(newSession);
+    _currentSessionId = newSession.id;
     
+    _saveSessions();
     notifyListeners();
   }
 
