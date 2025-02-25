@@ -258,7 +258,7 @@ class _ChatInputState extends State<ChatInput> {
   }
 
   void _showModelSelectionDialog(BuildContext context) {
-    final theme = Theme.of(context);
+    Theme.of(context);
     final provider = context.read<ChatProvider>();
     
     showDialog(

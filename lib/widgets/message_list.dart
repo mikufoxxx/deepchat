@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import 'chat_bubble.dart';
-import 'dart:async';
 
 class MessageList extends StatefulWidget {
   final ScrollController? scrollController;

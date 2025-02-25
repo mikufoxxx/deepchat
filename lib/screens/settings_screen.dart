@@ -347,8 +347,146 @@ class _FavoriteMessageDetailDialog extends StatelessWidget {
   }
 }
 
-class _BasicSettingsTab extends StatelessWidget {
-  const _BasicSettingsTab({super.key});
+class _BasicSettingsTab extends StatefulWidget {
+  const _BasicSettingsTab();
+
+  @override
+  State<_BasicSettingsTab> createState() => _BasicSettingsTabState();
+}
+
+class _BasicSettingsTabState extends State<_BasicSettingsTab> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late List<Animation<double>> _animations;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _animations = List.generate(
+      3,
+      (index) => Tween<double>(
+        begin: 50.0,
+        end: 0.0,
+      ).animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: Interval(
+            index * 0.2,
+            0.6 + index * 0.2,
+            curve: Curves.easeOutCubic,
+          ),
+        ),
+      ),
+    );
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        AnimatedBuilder(
+          animation: _animations[0],
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(0, _animations[0].value),
+              child: Opacity(
+                opacity: 1 - (_animations[0].value / 50),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'API 设置',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildApiSection(context),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 24),
+        AnimatedBuilder(
+          animation: _animations[1],
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(0, _animations[1].value),
+              child: Opacity(
+                opacity: 1 - (_animations[1].value / 50),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '温度设置',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTemperatureSlider(context),
+                    const SizedBox(height: 24),
+                    const Text(
+                      '主题设置',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildThemeSection(context),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 24),
+        AnimatedBuilder(
+          animation: _animations[2],
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(0, _animations[2].value),
+              child: Opacity(
+                opacity: 1 - (_animations[2].value / 50),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '关于',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildAboutSection(context),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
 
   Widget _buildApiSection(BuildContext context) {
     final theme = Theme.of(context);
@@ -504,59 +642,58 @@ class _BasicSettingsTab extends StatelessWidget {
   }
 
   Widget _buildTemperatureSlider(BuildContext context) {
-    return Consumer<ChatProvider>(
-      builder: (context, provider, child) {
-        String description = '';
-        if (provider.temperature <= 0.2) {
-          description = '当前适合：代码生成、数学解题等高精确度的任务';
-        } else if (provider.temperature <= 0.7) {
-          description = '当前适合：数据抽取、分析等需要高准确性的任务';
-        } else if (provider.temperature <= 1.3) {
-          description = '当前适合：通用对话、翻译等较为均衡的任务';
-        } else {
-          description = '当前适合：创意写作、创作等需要高创造力的任务';
-        }
+    final theme = Theme.of(context);
+    final provider = context.watch<ChatProvider>();
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Slider(
-              value: provider.temperature,
-              min: 0.0,
-              max: 1.5,
-              divisions: 15,
-              label: provider.temperature.toStringAsFixed(1),
-              onChanged: (value) {
-                provider.setTemperature(value);
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '当前温度：${provider.temperature.toStringAsFixed(1)}',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+    String description = '';
+    if (provider.temperature <= 0.2) {
+      description = '当前适合：代码生成、数学解题等高精确度的任务';
+    } else if (provider.temperature <= 0.7) {
+      description = '当前适合：数据抽取、分析等需要高准确性的任务';
+    } else if (provider.temperature <= 1.3) {
+      description = '当前适合：通用对话、翻译等较为均衡的任务';
+    } else {
+      description = '当前适合：创意写作、创作等需要高创造力的任务';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Slider(
+          value: provider.temperature,
+          min: 0.0,
+          max: 1.5,
+          divisions: 15,
+          label: provider.temperature.toStringAsFixed(1),
+          onChanged: (value) {
+            provider.setTemperature(value);
+          },
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '当前温度：${provider.temperature.toStringAsFixed(1)}',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
-            ),
-          ],
-        );
-      },
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -677,55 +814,6 @@ class _BasicSettingsTab extends StatelessWidget {
             color: theme.colorScheme.outlineVariant.withOpacity(0.5),
             height: 16,
           ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16.0),
-      children: [
-        const Text(
-          'API 设置',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildApiSection(context),
-        const SizedBox(height: 24),
-        const Text(
-          '温度设置',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildTemperatureSlider(context),
-        const SizedBox(height: 24),
-        const Text(
-          '主题设置',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 24),
-        _buildThemeSection(context),
-        const SizedBox(height: 24),
-        const Text(
-          '关于',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildAboutSection(context),
-        const SizedBox(height: 24),
       ],
     );
   }

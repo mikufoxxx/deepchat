@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
 import 'dart:ui';
 
 class ShaderLogo extends StatefulWidget {

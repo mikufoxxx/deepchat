@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:math' show sqrt, max, pi;
+import 'dart:math' show sqrt;
 
 class CircularRevealClipper extends CustomClipper<Path> {
   final double fraction;

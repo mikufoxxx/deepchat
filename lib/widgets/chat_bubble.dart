@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/chat_message.dart';
@@ -66,7 +65,7 @@ class ChatBubble extends StatelessWidget {
 
   Widget _buildAssistantMessage(BuildContext context) {
     final theme = Theme.of(context);
-    final provider = context.watch<ChatProvider>();
+    context.watch<ChatProvider>();
     final isR1Message = message.model == 'r1';
     
     return Column(
@@ -125,7 +124,7 @@ class ChatBubble extends StatelessWidget {
   }
 
   Widget _buildMessageActions(BuildContext context) {
-    final theme = Theme.of(context);
+    Theme.of(context);
     return Padding(
       padding: EdgeInsets.only(top: 4),
       child: Row(
@@ -210,7 +209,7 @@ class ThinkingStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final provider = context.watch<ChatProvider>();
-    final thinkingDuration = provider.getThinkingDuration(message.id);
+    provider.getThinkingDuration(message.id);
     
     return Row(
       children: [
