@@ -36,6 +36,7 @@ class ChatProvider with ChangeNotifier {
   DateTime _lastNotifyTime = DateTime.now();
   bool _isResponding = false;
   bool _shouldScrollToBottom = false;
+  UserInfo? _cachedUserInfo;
 
   ChatProvider(this._storage) {
     _apiService = ApiService();
@@ -587,11 +588,17 @@ class ChatProvider with ChangeNotifier {
 
   int getThinkingDuration(String messageId) => _thinkingDurations[messageId] ?? 0;
 
-  Future<UserInfo> getUserInfo() async {
+  Future<UserInfo> getUserInfo({bool forceRefresh = false}) async {
+    if (!forceRefresh && _cachedUserInfo != null) {
+      return _cachedUserInfo!;
+    }
+    
     if (_siliconflowApiKey.isEmpty) {
       throw Exception('请先配置 API Key');
     }
-    return await _apiService.getUserInfo();
+    
+    _cachedUserInfo = await _apiService.getUserInfo();
+    return _cachedUserInfo!;
   }
 
   bool get isPro => _isPro;

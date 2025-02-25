@@ -246,10 +246,16 @@ class _FavoriteMessageDetailDialog extends StatelessWidget {
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: message.content));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('已复制到剪贴板'),
+                        SnackBar(
+                          content: Text(
+                            '已复制到剪贴板',
+                            style: TextStyle(
+                              color: theme.colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                          backgroundColor: theme.colorScheme.primaryContainer,
                           behavior: SnackBarBehavior.floating,
-                          duration: Duration(seconds: 1),
+                          duration: const Duration(seconds: 1),
                         ),
                       );
                     },
@@ -360,13 +366,53 @@ class _BasicSettingsTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '账户设置',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onSurface,
-            ),
+          Row(
+            children: [
+              Text(
+                '账户设置',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 20),
+                onPressed: () async {
+                  try {
+                    await provider.getUserInfo(forceRefresh: true);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '余额已更新',
+                          style: TextStyle(
+                            color: theme.colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          e.toString(),
+                          style: TextStyle(
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                        backgroundColor: theme.colorScheme.errorContainer,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+                tooltip: '刷新余额',
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           FutureBuilder<UserInfo>(
@@ -441,7 +487,7 @@ class _BasicSettingsTab extends StatelessWidget {
           controller: TextEditingController(text: provider.siliconflowApiKey),
           onChanged: (value) => _saveApiKey(context, value, true),
           decoration: InputDecoration(
-            hintText: 'sf-xxxxxx',
+            hintText: 'sk-xxxxxx',
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
