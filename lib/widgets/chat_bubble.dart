@@ -33,7 +33,7 @@ class ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Column(
         crossAxisAlignment: message.role == 'user' 
             ? CrossAxisAlignment.end 
@@ -71,13 +71,15 @@ class ChatBubble extends StatelessWidget {
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         if (isR1Message && message.thoughtProcess != null)
           ThinkingSection(message: message),
         if (!message.isThinking)
           Container(
             width: MediaQuery.of(context).size.width * 0.95,
-            padding: EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            margin: const EdgeInsets.only(top: 2),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(8),
@@ -291,9 +293,7 @@ class _ThinkingSectionState extends State<ThinkingSection> {
                         ),
                       SizedBox(width: 6),
                       Text(
-                        widget.message.isThinking ? 
-                          '思考中（用时${context.watch<ChatProvider>().getThinkingDuration(widget.message.id)}秒）' : 
-                          '思考完毕（用时${context.watch<ChatProvider>().getThinkingDuration(widget.message.id)}秒）',
+                        widget.message.isThinking ? '思考中' : '思考完毕',
                         style: theme.textTheme.bodySmall?.copyWith(
                           fontSize: 11,
                           color: theme.colorScheme.outline,

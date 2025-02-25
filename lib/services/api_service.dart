@@ -90,8 +90,10 @@ class ApiService {
               if (isThinking) {
                 yield '\n\n回答：';
                 isThinking = false;
+              } else {
+                final trimmedContent = content.replaceFirst(RegExp(r'^\n+'), '');
+                yield trimmedContent;
               }
-              yield content;
             }
           } catch (e) {
             print('解析错误: $e');
@@ -112,7 +114,7 @@ class ApiService {
         'messages': [
           {
             'role': 'system',
-            'content': '请根据对话内容生成一个简短的主题（不超过15个字），直接返回主题文本，不要添加任何解释或标点符号。',
+            'content': '请根据对话内容生成一个简短的主题（不超过10个字），直接返回主题文本，不要添加任何解释或标点符号。',
           },
           ...messages.map((msg) => {
             'role': msg.role,

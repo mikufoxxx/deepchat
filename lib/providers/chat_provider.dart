@@ -209,17 +209,19 @@ class ChatProvider with ChangeNotifier {
             );
             _updateLastMessage(aiMessage);
           } else {
-            response += chunk;
-            final aiMessage = ChatMessage(
-              id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
-              role: 'assistant',
-              content: response,
-              isThinking: false,
-              sessionId: _currentSessionId!,
-              timestamp: startTime,
-              thoughtProcess: thoughtProcess,
-            );
-            _updateLastMessage(aiMessage);
+            if (chunk.trim().isNotEmpty) {  // 只有当内容不为空时才更新
+              response += chunk;
+              final aiMessage = ChatMessage(
+                id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+                role: 'assistant',
+                content: response,
+                isThinking: false,
+                sessionId: _currentSessionId!,
+                timestamp: startTime,
+                thoughtProcess: thoughtProcess,
+              );
+              _updateLastMessage(aiMessage);
+            }
           }
         },
         onDone: () {
