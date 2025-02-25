@@ -7,6 +7,7 @@ import 'services/storage_service.dart';
 import 'providers/theme_provider.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'dart:ui';
 
 void main() async {
   SystemChrome.setSystemUIOverlayStyle(
@@ -38,6 +39,23 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 设置系统UI样式
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+      ),
+    );
+    
+    // 启用边到边显示
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+      overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
+    );
+
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return MaterialApp(
@@ -67,6 +85,10 @@ class MyApp extends StatelessWidget {
                 systemNavigationBarColor: Colors.transparent,
                 systemNavigationBarDividerColor: Colors.transparent,
                 systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light 
+                    ? Brightness.dark 
+                    : Brightness.light,
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Theme.of(context).brightness == Brightness.light 
                     ? Brightness.dark 
                     : Brightness.light,
               ),
