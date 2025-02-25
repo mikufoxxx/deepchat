@@ -87,9 +87,28 @@ class ChatProvider with ChangeNotifier {
     _isPro = await _storage.getIsPro() ?? false;
     _modelVersion = _isDeepThinking ? 'r1' : 'v3';
     
+    // 检查最新的会话是否为空
+    if (_sessions.isNotEmpty) {
+      final latestSession = _sessions.last;
+      if (latestSession.messages.isEmpty) {
+        _sessions.removeLast();
+      }
+    }
+    
+    // 无论是否有其他会话，都创建新会话
+    final newSessionId = DateTime.now().millisecondsSinceEpoch;
+    final newSession = ChatSession(
+      id: newSessionId,
+      title: '新对话',
+      messages: [],
+    );
+    _sessions.add(newSession);
+    _currentSessionId = newSession.id;
+    
     _apiService.updateModel(currentModel);
     _apiService.updateApiKey(_apiKey);
     
+    _saveSessions();
     notifyListeners();
   }
 
