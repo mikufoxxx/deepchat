@@ -40,6 +40,17 @@ class _ChatInputState extends State<ChatInput> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              IconButton(
+                icon: Icon(
+                  Icons.add_circle_outline,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                onPressed: () => _showFeatureMenu(context),
+                constraints: BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
+                ),
+              ),
               Expanded(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
@@ -249,6 +260,122 @@ class _ChatInputState extends State<ChatInput> {
                 provider.togglePro();
                 Navigator.pop(context);
               },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFeatureMenu(BuildContext context) {
+    final theme = Theme.of(context);
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final position = button.localToGlobal(Offset.zero);
+    
+    showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx + 30,
+        position.dy - 120,
+        position.dx + 140,
+        position.dy,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      color: Colors.transparent,
+      elevation: 0,
+      items: [
+        PopupMenuItem(
+          height: 120,
+          padding: EdgeInsets.zero,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: theme.colorScheme.outline.withOpacity(0.2),
+                    width: 1.2,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.functions,
+                      title: '数学公式',
+                      onTap: () {
+                        Navigator.pop(context);
+                        // TODO: 实现数学公式功能
+                      },
+                      showBorder: true,
+                    ),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.document_scanner,
+                      title: 'OCR 识别',
+                      onTap: () {
+                        Navigator.pop(context);
+                        // TODO: 实现 OCR 功能
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMenuItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool showBorder = false,
+  }) {
+    final theme = Theme.of(context);
+    
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        height: 44,
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          border: showBorder ? Border(
+            bottom: BorderSide(
+              color: theme.colorScheme.outline.withOpacity(0.1),
+              width: 0.5,
+            ),
+          ) : null,
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                size: 18,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 15,
+                color: theme.colorScheme.onSurface,
+              ),
             ),
           ],
         ),
