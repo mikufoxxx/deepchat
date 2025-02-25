@@ -59,6 +59,27 @@ class ChatBubble extends StatelessWidget {
       child: MarkdownBody(
         data: message.content,
         selectable: true,
+        styleSheet: MarkdownStyleSheet(
+          p: TextStyle(
+            fontSize: 15,
+            height: 1.5,
+            color: theme.colorScheme.onSurface,
+          ),
+          code: TextStyle(
+            fontSize: 14,
+            backgroundColor: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+            color: theme.colorScheme.primary,
+          ),
+          codeblockDecoration: BoxDecoration(
+            color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        onTapLink: (text, href, title) {
+          if (href != null) {
+            launchUrl(Uri.parse(href));
+          }
+        },
       ),
     );
   }

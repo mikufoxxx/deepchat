@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../providers/chat_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import '../services/upload_service.dart';
+import '../models/uploaded_item.dart';
 
 class ChatInput extends StatefulWidget {
   const ChatInput({super.key});
@@ -11,11 +14,12 @@ class ChatInput extends StatefulWidget {
 }
 
 class _ChatInputState extends State<ChatInput> {
-  final _controller = TextEditingController();
-  final _focusNode = FocusNode();
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
   bool _isComposing = false;
   bool _isFocused = false;
-
+  List<UploadedItem> _uploadedItems = [];
+  
   @override
   void initState() {
     super.initState();
@@ -40,6 +44,7 @@ class _ChatInputState extends State<ChatInput> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              _buildUploadedItems(),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -212,12 +217,12 @@ class _ChatInputState extends State<ChatInput> {
         color: Colors.transparent,
         child: InkWell(
           onTap: _isComposing && !provider.isResponding
-              ? () => _handleSubmitted(_controller.text)
+              ? () => _handleSend()
               : null,
           borderRadius: BorderRadius.circular(20),
           child: IconButton(
             onPressed: _isComposing && !provider.isResponding
-                ? () => _handleSubmitted(_controller.text)
+                ? () => _handleSend()
                 : null,
             icon: provider.isResponding
                 ? SizedBox(
@@ -252,13 +257,26 @@ class _ChatInputState extends State<ChatInput> {
     );
   }
 
-  void _handleSubmitted(String text) {
-    if (text.isNotEmpty) {
-      context.read<ChatProvider>().sendMessage(text);
-      _controller.clear();
+  void _handleSend() async {
+    final content = _controller.text.trim();
+    if ((content.isEmpty && _uploadedItems.isEmpty) || !mounted) return;
+
+    setState(() {
+      _isComposing = false;
+    });
+    _controller.clear();
+    
+    final provider = context.read<ChatProvider>();
+    
+    if (_uploadedItems.isNotEmpty) {
+      // 如果有上传的文件，使用新的发送方法
+      await provider.sendMessagesWithFiles(content, _uploadedItems);
       setState(() {
-        _isComposing = false;
+        _uploadedItems.clear(); // 发送后清空上传列表
       });
+    } else {
+      // 如果只有文本消息，使用原来的发送方法
+      await provider.sendMessage(content);
     }
   }
 
@@ -301,116 +319,318 @@ class _ChatInputState extends State<ChatInput> {
 
   void _showFeatureMenu(BuildContext context) {
     final theme = Theme.of(context);
-    final RenderBox button = context.findRenderObject() as RenderBox;
-    final position = button.localToGlobal(Offset.zero);
     
-    showMenu(
+    showModalBottomSheet(
       context: context,
-      position: RelativeRect.fromLTRB(
-        position.dx + 30,
-        position.dy - 120,
-        position.dx + 140,
-        position.dy,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
-      color: Colors.transparent,
-      elevation: 0,
-      items: [
-        PopupMenuItem(
-          height: 120,
-          padding: EdgeInsets.zero,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: theme.colorScheme.outline.withOpacity(0.2),
-                    width: 1.2,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.functions,
-                      title: '数学公式',
-                      onTap: () {
-                        Navigator.pop(context);
-                        // TODO: 实现数学公式功能
-                      },
-                      showBorder: true,
-                    ),
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.document_scanner,
-                      title: 'OCR 识别',
-                      onTap: () {
-                        Navigator.pop(context);
-                        // TODO: 实现 OCR 功能
-                      },
-                    ),
-                  ],
+      backgroundColor: Colors.transparent,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: theme.colorScheme.outline.withOpacity(0.2),
+                  width: 1,
                 ),
               ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: theme.colorScheme.outline.withOpacity(0.1),
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          '选择上传类型',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          onPressed: () => Navigator.pop(context),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildFeatureItem(
+                    context,
+                    icon: Icons.camera_alt,
+                    title: '拍照上传',
+                    subtitle: '使用相机拍摄照片',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _handleImageUpload(ImageSource.camera);
+                    },
+                  ),
+                  _buildFeatureItem(
+                    context,
+                    icon: Icons.photo_library,
+                    title: '从相册选择',
+                    subtitle: '从相册中选择图片',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _handleImageUpload(ImageSource.gallery);
+                    },
+                  ),
+                  _buildFeatureItem(
+                    context,
+                    icon: Icons.upload_file,
+                    title: '上传文件',
+                    subtitle: '上传本地文档文件',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _handleFileUpload();
+                    },
+                    showBorder: false,
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildMenuItem(
+  Widget _buildFeatureItem(
     BuildContext context, {
     required IconData icon,
     required String title,
+    required String subtitle,
     required VoidCallback onTap,
-    bool showBorder = false,
+    bool showBorder = true,
   }) {
     final theme = Theme.of(context);
     
     return InkWell(
       onTap: onTap,
       child: Container(
-        height: 44,
-        padding: EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           border: showBorder ? Border(
             bottom: BorderSide(
               color: theme.colorScheme.outline.withOpacity(0.1),
-              width: 0.5,
             ),
           ) : null,
         ),
         child: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(6),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                color: theme.colorScheme.primaryContainer.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
-                size: 18,
+                size: 24,
                 color: theme.colorScheme.primary,
               ),
             ),
-            const SizedBox(width: 12),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 15,
-                color: theme.colorScheme.onSurface,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _handleImageUpload(ImageSource source) async {
+    final uploadService = UploadService();
+    
+    try {
+      final file = await uploadService.pickImage(source);
+      if (file != null) {
+        final size = await file.length();
+        
+        if (size > 10 * 1024 * 1024) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('图片大小不能超过10MB')),
+            );
+          }
+          return;
+        }
+        
+        setState(() {
+          _uploadedItems.add(UploadedItem(
+            file: file,
+            name: file.path.split('/').last,
+            type: 'image',
+          ));
+        });
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('选择图片失败: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleFileUpload() async {
+    final uploadService = UploadService();
+    
+    try {
+      final file = await uploadService.pickFile();
+      if (file != null) {
+        final size = await file.length();
+        
+        if (size > 20 * 1024 * 1024) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('文件大小不能超过20MB')),
+            );
+          }
+          return;
+        }
+        
+        setState(() {
+          _uploadedItems.add(UploadedItem(
+            file: file,
+            name: file.path.split('/').last,
+            type: 'file',
+          ));
+        });
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('选择文件失败: $e')),
+        );
+      }
+    }
+  }
+
+  Widget _buildUploadedItems() {
+    if (_uploadedItems.isEmpty) return const SizedBox.shrink();
+    
+    return Container(
+      height: 60,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _uploadedItems.length,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemBuilder: (context, index) {
+          final item = _uploadedItems[index];
+          final theme = Theme.of(context);
+          
+          return Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceVariant.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: theme.colorScheme.outline.withOpacity(0.2),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (item.type == 'image')
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.file(
+                      item.file,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                else
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(
+                      Icons.insert_drive_file,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      item.name,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    Text(
+                      '${(item.file.lengthSync() / 1024).toStringAsFixed(1)}KB',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 16),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () {
+                    setState(() {
+                      _uploadedItems.removeAt(index);
+                    });
+                  },
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

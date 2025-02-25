@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/chat_message.dart';
 import '../models/chat_session.dart';
+import '../models/uploaded_item.dart';
 import '../screens/chat_screen.dart';
 import '../screens/settings_screen.dart';
 import '../services/api_service.dart';
@@ -721,4 +724,82 @@ class ChatProvider with ChangeNotifier {
   }
 
   bool get isBalanceRefreshing => _isBalanceRefreshing;
+
+  Future<void> handleFileUpload(File file) async {
+    if (_isStreaming) return;
+    
+    try {
+      final content = await file.readAsString();
+      await sendMessage('以下是文件内容，请帮我分析：\n\n$content');
+    } catch (e) {
+      if (currentSession != null) {
+        final errorMessage = ChatMessage(
+          id: 'error_${DateTime.now().millisecondsSinceEpoch}',
+          role: 'assistant',
+          content: '读取文件失败：$e',
+          sessionId: _currentSessionId,
+        );
+        _addMessage(errorMessage);
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> handleImageUpload(File image) async {
+    if (_isStreaming) return;
+    
+    try {
+      final bytes = await image.readAsBytes();
+      final base64Image = base64Encode(bytes);
+      await sendMessage('这是一张图片，请帮我分析：\n![image]($base64Image)');
+    } catch (e) {
+      if (currentSession != null) {
+        final errorMessage = ChatMessage(
+          id: 'error_${DateTime.now().millisecondsSinceEpoch}',
+          role: 'assistant',
+          content: '处理图片失败：$e',
+          sessionId: _currentSessionId,
+        );
+        _addMessage(errorMessage);
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> sendMessagesWithFiles(String content, List<UploadedItem> files) async {
+    if (_isStreaming) return;
+    
+    _isStreaming = true;
+    _isResponding = true;
+    notifyListeners();
+    
+    try {
+      String fullContent = content;
+      
+      for (var file in files) {
+        if (file.type == 'image') {
+          final bytes = await file.file.readAsBytes();
+          final base64Image = base64Encode(bytes);
+          fullContent += '\n![${file.name}](data:image/png;base64,$base64Image)';
+        } else {
+          final fileContent = await file.file.readAsString();
+          fullContent += '\n\n文件 ${file.name} 的内容:\n```\n$fileContent\n```';
+        }
+      }
+
+      await sendMessage(fullContent);
+      
+    } catch (e) {
+      if (currentSession != null) {
+        final errorMessage = ChatMessage(
+          id: 'error_${DateTime.now().millisecondsSinceEpoch}',
+          role: 'assistant',
+          content: '处理文件失败：$e',
+          sessionId: _currentSessionId,
+        );
+        _addMessage(errorMessage);
+        notifyListeners();
+      }
+    }
+  }
 }
