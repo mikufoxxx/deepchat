@@ -403,27 +403,19 @@ class ChatProvider with ChangeNotifier {
   void _updateLastMessage(ChatMessage message) {
     if (_currentSessionId == null) return;
 
-    // 计算当前思考时间
-    if (message.thoughtProcess != null) {
-      final currentDuration = DateTime.now().difference(message.timestamp).inSeconds;
-      
-      // 如果是思考中，持续更新时间
-      if (message.isThinking) {
-        _thinkingDurations[message.id] = currentDuration;
-      } 
-      // 如果思考完毕且没有记录最终时间，记录最终时间
-      else if (!_thinkingDurations.containsKey(message.id)) {
-        _thinkingDurations[message.id] = currentDuration;
-      }
-    }
+    // 添加模型信息和思考过程
+    final messageWithModel = message.copyWith(
+      model: _modelVersion,
+      thoughtProcess: _modelVersion == 'r1' ? message.thoughtProcess : null,
+    );
 
     _sessions = _sessions.map((session) {
       if (session.id == _currentSessionId) {
         final messages = List<ChatMessage>.from(session.messages);
         if (messages.isNotEmpty && messages.last.role == 'assistant') {
-          messages[messages.length - 1] = message;
+          messages[messages.length - 1] = messageWithModel;
         } else {
-          messages.add(message);
+          messages.add(messageWithModel);
         }
         return session.copyWith(messages: messages);
       }
@@ -473,6 +465,7 @@ class ChatProvider with ChangeNotifier {
   
   void toggleDeepThinking() {
     _isDeepThinking = !_isDeepThinking;
+    _modelVersion = _isDeepThinking ? 'r1' : 'v3';
     _apiService.updateModel(currentModel);
     notifyListeners();
   }
