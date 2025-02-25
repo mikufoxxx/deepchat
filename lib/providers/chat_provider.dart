@@ -33,6 +33,7 @@ class ChatProvider with ChangeNotifier {
   bool _isPro = false;
   String _modelVersion = 'v3'; // 'v3' 或 'r1'
   final Map<String, bool> _completedMessages = {};
+  DateTime _lastNotifyTime = DateTime.now();
 
   ChatProvider(this._storage) {
     _apiService = ApiService();
@@ -147,41 +148,33 @@ class ChatProvider with ChangeNotifier {
 
   // 发送消息
   Future<void> sendMessage(String content) async {
-    _streamSubscription?.cancel();
-    if (_currentSessionId == null) return;
-
-    final userMessage = ChatMessage(
-      id: 'user_${DateTime.now().millisecondsSinceEpoch}',
-      role: 'user',
-      content: content,
-      sessionId: _currentSessionId!,
-    );
-
-    _addMessage(userMessage);
+    if (_isStreaming || content.trim().isEmpty) return;
+    
     _isStreaming = true;
     notifyListeners();
-
+    
     try {
-      String thoughtProcess = '';
-      String response = '';
+      final userMessage = ChatMessage(
+        id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+        role: 'user',
+        content: content,
+        sessionId: _currentSessionId,
+        timestamp: DateTime.now(),
+      );
+      
+      _addMessage(userMessage);
+      
+      var thoughtProcess = '';
+      var response = '';
       final startTime = DateTime.now();
-      var session = currentSession;
-      if (session == null) return;
       
-      final messages = [...session.messages];
-      bool isThinkingMode = _isDeepThinking;
-      
-      var lastNotifyTime = DateTime.now();
-      
-      _streamSubscription = _apiService.getChatCompletionStream(
-        messages, 
-        _apiKey ?? '', 
-        _temperature,
-      ).listen(
+      _streamSubscription = _apiService
+          .getChatCompletionStream(currentMessages, _siliconflowApiKey, _temperature)
+          .listen(
         (chunk) {
-          if (DateTime.now().difference(lastNotifyTime).inMilliseconds > 100) {
+          if (DateTime.now().difference(_lastNotifyTime).inMilliseconds > 100) {
             notifyListeners();
-            lastNotifyTime = DateTime.now();
+            _lastNotifyTime = DateTime.now();
           }
           
           if (chunk.startsWith('思考过程：')) {
@@ -191,7 +184,7 @@ class ChatProvider with ChangeNotifier {
               role: 'assistant',
               content: thoughtProcess,
               isThinking: true,
-              sessionId: _currentSessionId!,
+              sessionId: _currentSessionId,
               timestamp: startTime,
               thoughtProcess: thoughtProcess,
             );
@@ -203,7 +196,7 @@ class ChatProvider with ChangeNotifier {
               role: 'assistant',
               content: '',
               isThinking: false,
-              sessionId: _currentSessionId!,
+              sessionId: _currentSessionId,
               timestamp: startTime,
               thoughtProcess: thoughtProcess,
             );
@@ -216,7 +209,7 @@ class ChatProvider with ChangeNotifier {
                 role: 'assistant',
                 content: response,
                 isThinking: false,
-                sessionId: _currentSessionId!,
+                sessionId: _currentSessionId,
                 timestamp: startTime,
                 thoughtProcess: thoughtProcess,
               );
@@ -224,25 +217,21 @@ class ChatProvider with ChangeNotifier {
             }
           }
         },
-        onDone: () {
+        onDone: () async {
           // 标记最后一条消息为完成状态
           final lastMessage = currentSession?.messages.last;
           if (lastMessage != null) {
             _completedMessages[lastMessage.id] = true;
             notifyListeners();
           }
+          
+          // 检查是否是第一轮对话完成
+          final session = currentSession;
+          if (session != null && _isFirstRoundComplete(session)) {
+            await _generateTitle(session);
+          }
         },
       );
-
-      // 重新获取当前会话
-      session = _sessions.firstWhere(
-        (s) => s.id == _currentSessionId,
-      );
-      
-      // AI 回复完成后生成标题
-      if (session.title == '新对话') {
-        await _generateTitle(session);
-      }
 
     } catch (e) {
       final errorMessage = ChatMessage(
@@ -432,21 +421,45 @@ class ChatProvider with ChangeNotifier {
     await _saveSessions();
   }
 
+  bool _shouldGenerateTitle(ChatSession session) {
+    // 只有当会话有两条消息(一问一答)且标题是默认的"新对话"时才生成
+    return session.messages.length >= 2 && 
+           session.title == '新对话' &&
+           session.messages[0].role == 'user' &&
+           session.messages[1].role == 'assistant';
+  }
+
   Future<void> _generateTitle(ChatSession session) async {
-    if (session.messages.isEmpty) return;
+    if (_currentSessionId == null) return;
+    
+    if (session == null || !_shouldGenerateTitle(session)) return;
+
+    // 构建用于生成标题的消息
+    final titleMessages = [
+      ChatMessage(
+        id: 'system_${DateTime.now().millisecondsSinceEpoch}',
+        role: 'system',
+        content: '请根据用户的问题生成一个简短的标题（不超过15个字）。不要加引号，不要解释。',
+        sessionId: _currentSessionId!,
+        timestamp: DateTime.now(),
+      ),
+      session.messages[0], // 用户的问题
+    ];
 
     try {
-      final title = await _apiService.generateTitle(session.messages, _siliconflowApiKey);
+      var title = '';
+      await for (final chunk in _apiService.getChatCompletionStream(
+        titleMessages,
+        _siliconflowApiKey,
+        0.3, // 使用较低的温度以获得更稳定的标题
+      )) {
+        if (!chunk.startsWith('思考过程：')) {
+          title += chunk;
+        }
+      }
       
-      final updatedSession = session.copyWith(title: title);
-      _sessions = _sessions.map((s) => 
-        s.id == session.id ? updatedSession : s
-      ).toList();
-      
-      _saveSessions();
-      notifyListeners();
-      
-      print('生成标题成功: $title');
+      // 更新会话标题
+      renameSession(_currentSessionId!, title.trim());
     } catch (e) {
       print('生成标题失败: $e');
     }
@@ -593,5 +606,13 @@ class ChatProvider with ChangeNotifier {
       _currentSessionId = currentSession!.id;
       notifyListeners();
     }
+  }
+
+  bool _isFirstRoundComplete(ChatSession session) {
+    return session.messages.length == 2 && 
+           session.title == '新对话' &&
+           session.messages[0].role == 'user' &&
+           session.messages[1].role == 'assistant' &&
+           !session.messages[1].isThinking;
   }
 }
