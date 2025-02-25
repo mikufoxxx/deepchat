@@ -70,24 +70,29 @@ class ChatScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Row(
-        children: [
-          if (isWideScreen)
-            SizedBox(
-              width: 280,
-              child: chatDrawer,
+      body: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+        },
+        child: Row(
+          children: [
+            if (isWideScreen)
+              SizedBox(
+                width: 280,
+                child: chatDrawer,
+              ),
+            Expanded(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: MessageList(),
+                  ),
+                  const ChatInput(),
+                ],
+              ),
             ),
-          Expanded(
-            child: Column(
-              children: [
-                Expanded(
-                  child: MessageList(),
-                ),
-                const ChatInput(),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
       drawer: isWideScreen ? null : chatDrawer,
     );
