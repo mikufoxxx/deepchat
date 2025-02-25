@@ -38,16 +38,19 @@ class _ChatInputState extends State<ChatInput> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 40,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: 120,
+                  ),
                   child: TextField(
                     controller: _controller,
                     focusNode: _focusNode,
                     keyboardType: TextInputType.multiline,
-                    maxLines: 1,
+                    maxLines: null,
+                    minLines: 1,
                     style: TextStyle(fontSize: 14),
                     onChanged: (text) {
                       setState(() {
