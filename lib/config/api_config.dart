@@ -9,6 +9,7 @@ class ApiConfig {
     'deepseek_v3_pro': 'Pro/deepseek-ai/DeepSeek-V3',
     'deepseek_r1': 'deepseek-ai/DeepSeek-R1',
     'deepseek_r1_pro': 'Pro/deepseek-ai/DeepSeek-R1',
+    'siliconflow': 'deepseek-ai/DeepSeek-V3',
   };
   
   // API 相关配置

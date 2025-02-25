@@ -442,7 +442,7 @@ class ChatProvider with ChangeNotifier {
     if (session.messages.isEmpty) return;
 
     try {
-      final title = await _apiService.generateTitle(session.messages, _apiKey ?? '');
+      final title = await _apiService.generateTitle(session.messages, _siliconflowApiKey);
       
       final updatedSession = session.copyWith(title: title);
       _sessions = _sessions.map((s) => 
@@ -452,9 +452,9 @@ class ChatProvider with ChangeNotifier {
       _saveSessions();
       notifyListeners();
       
-      print('生成标题成功: $title'); // 调试日志
+      print('生成标题成功: $title');
     } catch (e) {
-      print('生成标题失败: $e'); // 调试日志
+      print('生成标题失败: $e');
     }
   }
 
