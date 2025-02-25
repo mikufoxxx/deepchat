@@ -31,11 +31,13 @@ class _MessageListState extends State<MessageList> {
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      Future.microtask(() {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+        );
+      });
     }
   }
 
@@ -46,13 +48,13 @@ class _MessageListState extends State<MessageList> {
         widget.scrollController != _scrollController) {
       _scrollController = widget.scrollController!;
     }
-    _checkForTargetMessage();
-  }
-
-  void _checkForTargetMessage() {
+    
+    // 每次消息更新时都滚动到底部
     final provider = context.read<ChatProvider>();
-    if (provider.isStreaming) {
-      _scrollToBottom();
+    if (provider.isStreaming || provider.currentMessages.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
     }
   }
 
