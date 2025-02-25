@@ -28,6 +28,8 @@ class ApiService {
     _currentModel = model;
   }
 
+  String get currentModel => _currentModel;
+
   Stream<String> getChatCompletionStream(
     List<ChatMessage> messages,
     String apiKey,

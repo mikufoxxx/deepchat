@@ -456,15 +456,24 @@ class ChatProvider with ChangeNotifier {
 
     try {
       var title = '';
+      // 临时保存当前模型设置
+      final originalModel = _apiService.currentModel;
+      
+      // 强制使用标准版 v3 模型
+      _apiService.updateModel(ApiConfig.models['siliconflow']!);
+      
       await for (final chunk in _apiService.getChatCompletionStream(
         titleMessages,
         _siliconflowApiKey,
-        0.3, // 使用较低的温度以获得更稳定的标题
+        0.3,
       )) {
         if (!chunk.startsWith('思考过程：')) {
           title += chunk;
         }
       }
+      
+      // 恢复原来的模型设置
+      _apiService.updateModel(originalModel);
       
       // 更新会话标题
       renameSession(_currentSessionId!, title.trim());
