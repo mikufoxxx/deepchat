@@ -37,6 +37,7 @@ class ChatProvider with ChangeNotifier {
   bool _isResponding = false;
   bool _shouldScrollToBottom = false;
   UserInfo? _cachedUserInfo;
+  bool _isBalanceRefreshing = false;
 
   ChatProvider(this._storage) {
     _apiService = ApiService();
@@ -124,6 +125,11 @@ class ChatProvider with ChangeNotifier {
 
   // 选择会话
   void selectSession(int id) {
+    if (!canInteract) {
+      // 通知UI显示提示
+      notifyListeners();
+      return;
+    }
     if (_sessions.any((session) => session.id == id)) {
       _streamSubscription?.cancel();
       _isStreaming = false;
@@ -135,6 +141,10 @@ class ChatProvider with ChangeNotifier {
 
   // 新建会话
   void newChat() {
+    if (!canInteract) {
+      notifyListeners();
+      return;
+    }
     // 检查当前会话是否为空
     final currentSession = _sessions.firstWhere(
       (session) => session.id == _currentSessionId,
@@ -497,6 +507,10 @@ class ChatProvider with ChangeNotifier {
   bool get isDeepThinking => _isDeepThinking;
   
   void toggleDeepThinking() {
+    if (!canInteract) {
+      notifyListeners();
+      return;
+    }
     _isDeepThinking = !_isDeepThinking;
     _modelVersion = _isDeepThinking ? 'r1' : 'v3';
     _storage.saveIsDeepThinking(_isDeepThinking);  // 保存设置
@@ -598,14 +612,25 @@ class ChatProvider with ChangeNotifier {
       throw Exception('请先配置 API Key');
     }
     
-    _cachedUserInfo = await _apiService.getUserInfo();
-    return _cachedUserInfo!;
+    _isBalanceRefreshing = true;
+    
+    try {
+      _cachedUserInfo = await _apiService.getUserInfo();
+      return _cachedUserInfo!;
+    } finally {
+      _isBalanceRefreshing = false;
+      notifyListeners();  // 只在最后通知一次
+    }
   }
 
   bool get isPro => _isPro;
   String get modelVersion => _modelVersion;
   
   void togglePro() {
+    if (!canInteract) {
+      notifyListeners();
+      return;
+    }
     _isPro = !_isPro;
     _storage.saveIsPro(_isPro);  // 保存设置
     _apiService.updateModel(currentModel);
@@ -650,4 +675,50 @@ class ChatProvider with ChangeNotifier {
     _shouldScrollToBottom = value;
     notifyListeners();
   }
+
+  bool get canInteract => !_isStreaming && !_isResponding;
+
+  void showStreamingWarning(BuildContext context) {
+    if (!canInteract) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('请等待对话完成喵~'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void showSettings(BuildContext context) {
+    if (!canInteract) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              const Text('请等待对话完成喵~'),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          duration: const Duration(seconds: 2),
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height - 100,
+            right: 20,
+            left: 20,
+          ),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SettingsScreen(),
+        ),
+      );
+    }
+  }
+
+  bool get isBalanceRefreshing => _isBalanceRefreshing;
 }

@@ -357,6 +357,7 @@ class _BasicSettingsTab extends StatefulWidget {
 class _BasicSettingsTabState extends State<_BasicSettingsTab> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late List<Animation<double>> _animations;
+  Future<UserInfo>? _userInfoFuture;
 
   @override
   void initState() {
@@ -365,7 +366,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> with SingleTickerP
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-
+    
     _animations = List.generate(
       3,
       (index) => Tween<double>(
@@ -489,105 +490,41 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> with SingleTickerP
   }
 
   Widget _buildApiSection(BuildContext context) {
-    final theme = Theme.of(context);
-    final provider = context.watch<ChatProvider>();
-    
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withOpacity(0.5),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final provider = context.read<ChatProvider>();
+    _userInfoFuture ??= provider.getUserInfo();
+
+    return FutureBuilder<UserInfo>(
+      future: _userInfoFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting || provider.isBalanceRefreshing) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (snapshot.hasError) {
+          return Column(
             children: [
-              Text(
-                '账户设置',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
+              _buildApiKeyInput(context, provider, Theme.of(context)),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  '获取用户信息失败: ${snapshot.error}',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.refresh, size: 20),
-                onPressed: () async {
-                  try {
-                    await provider.getUserInfo(forceRefresh: true);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          '余额已更新',
-                          style: TextStyle(
-                            color: theme.colorScheme.onPrimaryContainer,
-                          ),
-                        ),
-                        backgroundColor: theme.colorScheme.primaryContainer,
-                        behavior: SnackBarBehavior.floating,
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          e.toString(),
-                          style: TextStyle(
-                            color: theme.colorScheme.error,
-                          ),
-                        ),
-                        backgroundColor: theme.colorScheme.errorContainer,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
-                },
-                tooltip: '刷新余额',
-              ),
             ],
-          ),
-          const SizedBox(height: 16),
-          FutureBuilder<UserInfo>(
-            future: provider.getUserInfo(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              
-              if (snapshot.hasError) {
-                return Column(
-                  children: [
-                    _buildApiKeyInput(context, provider, theme),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: Text(
-                        '获取用户信息失败: ${snapshot.error}',
-                        style: TextStyle(color: theme.colorScheme.error),
-                      ),
-                    ),
-                  ],
-                );
-              }
+          );
+        }
 
-              final userInfo = snapshot.data!;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildApiKeyInput(context, provider, theme),
-                  const SizedBox(height: 16),
-                  _buildBalanceInfo(userInfo, theme),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
+        final userInfo = snapshot.data!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildApiKeyInput(context, provider, Theme.of(context)),
+            const SizedBox(height: 16),
+            _buildBalanceInfo(userInfo, Theme.of(context)),
+          ],
+        );
+      },
     );
   }
 

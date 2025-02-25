@@ -75,7 +75,9 @@ class ChatDrawer extends StatelessWidget {
                   ),
                   ...entry.value.map((session) {
                     final isSelected = session.id == currentSessionId;
+                    final provider = context.read<ChatProvider>();
                     return ListTile(
+                      enabled: provider.canInteract,
                       leading: const Icon(Icons.chat_bubble_outline),
                       title: Text(
                         session.title,
@@ -89,11 +91,9 @@ class ChatDrawer extends StatelessWidget {
                       ),
                       selected: isSelected,
                       trailing: IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          size: 20,
-                        ),
-                        onPressed: () {
+                        icon: const Icon(Icons.delete_outline),
+                        color: provider.canInteract ? null : theme.disabledColor,
+                        onPressed: provider.canInteract ? () {
                           showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
@@ -101,15 +101,12 @@ class ChatDrawer extends StatelessWidget {
                               content: const Text('确定要删除这个对话吗？这将同时删除该对话中的所有收藏消息。'),
                               actions: [
                                 TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
+                                  onPressed: () => Navigator.pop(context),
                                   child: const Text('取消'),
                                 ),
                                 TextButton(
                                   onPressed: () {
                                     final provider = context.read<ChatProvider>();
-                                    
                                     if (provider.sessions.length == 1) {
                                       provider.newChat();
                                       Future.delayed(const Duration(milliseconds: 100), () {
@@ -118,25 +115,42 @@ class ChatDrawer extends StatelessWidget {
                                     } else {
                                       provider.deleteSession(session.id);
                                     }
-                                    
-                                    Navigator.of(context).pop();
+                                    Navigator.pop(context);
                                   },
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: Colors.red,
-                                  ),
+                                  style: TextButton.styleFrom(foregroundColor: Colors.red),
                                   child: const Text('删除'),
                                 ),
                               ],
                             ),
                           );
-                        },
+                        } : null,
                       ),
                       onTap: () {
-                        if (!isSelected) {
-                          onSessionSelected(session.id);
-                          if (!isWideScreen) {
-                            Navigator.pop(context);
-                          }
+                        if (!provider.canInteract) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.info_outline, color: Colors.white),
+                                  const SizedBox(width: 8),
+                                  const Text('请等待对话完成喵~'),
+                                ],
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: theme.colorScheme.primary,
+                              duration: const Duration(seconds: 2),
+                              margin: EdgeInsets.only(
+                                bottom: MediaQuery.of(context).size.height - 100,
+                                right: 20,
+                                left: 20,
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        onSessionSelected(session.id);
+                        if (!isWideScreen) {
+                          Navigator.pop(context);
                         }
                       },
                     );
