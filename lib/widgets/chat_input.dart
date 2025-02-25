@@ -187,6 +187,7 @@ class _ChatInputState extends State<ChatInput> {
 
   Widget _buildSendButton(BuildContext context) {
     final theme = Theme.of(context);
+    final provider = context.watch<ChatProvider>();
     
     return Container(
       height: 40,
@@ -205,22 +206,48 @@ class _ChatInputState extends State<ChatInput> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: _isComposing ? _handleSubmit : null,
+          onTap: _isComposing && !provider.isResponding
+              ? () => _handleSubmitted(_controller.text)
+              : null,
           borderRadius: BorderRadius.circular(20),
-          child: Icon(
-            Icons.send,
-            size: 20,
-            color: _isComposing 
-                ? theme.colorScheme.onPrimary
-                : theme.colorScheme.onSurfaceVariant,
+          child: IconButton(
+            onPressed: _isComposing && !provider.isResponding
+                ? () => _handleSubmitted(_controller.text)
+                : null,
+            icon: provider.isResponding
+                ? SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        _isComposing
+                            ? Colors.white
+                            : theme.colorScheme.primary,
+                      ),
+                    ),
+                  )
+                : Icon(
+                    Icons.send,
+                    color: _isComposing
+                        ? Colors.white
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+            style: IconButton.styleFrom(
+              backgroundColor: _isComposing
+                  ? theme.colorScheme.primary
+                  : null,
+              foregroundColor: _isComposing
+                  ? Colors.white
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       ),
     );
   }
 
-  void _handleSubmit() {
-    final text = _controller.text.trim();
+  void _handleSubmitted(String text) {
     if (text.isNotEmpty) {
       context.read<ChatProvider>().sendMessage(text);
       _controller.clear();

@@ -34,6 +34,7 @@ class ChatProvider with ChangeNotifier {
   String _modelVersion = 'v3'; // 'v3' 或 'r1'
   final Map<String, bool> _completedMessages = {};
   DateTime _lastNotifyTime = DateTime.now();
+  bool _isResponding = false;
 
   ChatProvider(this._storage) {
     _apiService = ApiService();
@@ -151,6 +152,7 @@ class ChatProvider with ChangeNotifier {
     if (_isStreaming || content.trim().isEmpty) return;
     
     _isStreaming = true;
+    _isResponding = true;  // 开始响应
     notifyListeners();
     
     try {
@@ -230,6 +232,8 @@ class ChatProvider with ChangeNotifier {
           if (session != null && _isFirstRoundComplete(session)) {
             await _generateTitle(session);
           }
+          _isResponding = false;  // 响应完成
+          notifyListeners();
         },
       );
 
@@ -241,6 +245,8 @@ class ChatProvider with ChangeNotifier {
         sessionId: _currentSessionId!,
       );
       _addMessage(errorMessage);
+      _isResponding = false;  // 发生错误时也要重置状态
+      notifyListeners();
     }
 
     _isStreaming = false;
@@ -615,4 +621,6 @@ class ChatProvider with ChangeNotifier {
            session.messages[1].role == 'assistant' &&
            !session.messages[1].isThinking;
   }
+
+  bool get isResponding => _isResponding;
 }
