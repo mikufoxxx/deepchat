@@ -8,15 +8,26 @@ import 'package:flutter/services.dart';
 import 'dart:ui';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // 先设置系统UI样式
   SystemChrome.setSystemUIOverlayStyle(
-    SystemUiOverlayStyle(
+    const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.dark,
       systemNavigationBarColor: Colors.transparent,
       systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
   
-  WidgetsFlutterBinding.ensureInitialized();
+  // 启用边到边显示
+  await SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.edgeToEdge,
+    overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
+  );
+  
   final storage = await StorageService.init();
   
   runApp(
@@ -37,31 +48,22 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 设置系统UI样式
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.transparent,
-        systemNavigationBarDividerColor: Colors.transparent,
-      ),
-    );
-    
-    // 启用边到边显示
-    SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.edgeToEdge,
-      overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
-    );
-
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
+
         return MaterialApp(
           title: 'DeepChat',
           theme: ThemeData(
             useMaterial3: true,
             colorScheme: ColorScheme.fromSeed(
               seedColor: themeProvider.themeColor,
+            ),
+            appBarTheme: const AppBarTheme(
+              systemOverlayStyle: SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.dark,
+                statusBarBrightness: Brightness.light,
+              ),
             ),
           ),
           darkTheme: ThemeData(
@@ -70,6 +72,13 @@ class MyApp extends StatelessWidget {
               seedColor: themeProvider.themeColor,
               brightness: Brightness.dark,
             ),
+            appBarTheme: const AppBarTheme(
+              systemOverlayStyle: SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.light,
+                statusBarBrightness: Brightness.dark,
+              ),
+            ),
           ),
           themeMode: themeProvider.followSystem
               ? ThemeMode.system
@@ -77,22 +86,6 @@ class MyApp extends StatelessWidget {
                   ? ThemeMode.dark
                   : ThemeMode.light,
           home: const ChatScreen(),
-          builder: (context, child) {
-            return AnnotatedRegion<SystemUiOverlayStyle>(
-              value: SystemUiOverlayStyle(
-                systemNavigationBarColor: Colors.transparent,
-                systemNavigationBarDividerColor: Colors.transparent,
-                systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light 
-                    ? Brightness.dark 
-                    : Brightness.light,
-                statusBarColor: Colors.transparent,
-                statusBarIconBrightness: Theme.of(context).brightness == Brightness.light 
-                    ? Brightness.dark 
-                    : Brightness.light,
-              ),
-              child: child!,
-            );
-          },
         );
       },
     );
