@@ -31,156 +31,161 @@ class _ChatInputState extends State<ChatInput> {
     final theme = Theme.of(context);
     final provider = context.watch<ChatProvider>();
 
-    return Container(
-      color: theme.colorScheme.surface.withOpacity(0.8),
-      padding: EdgeInsets.fromLTRB(12, 8, 12, 16 + MediaQuery.of(context).viewInsets.bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+        child: Container(
+          color: theme.colorScheme.surface.withOpacity(0.1),
+          padding: EdgeInsets.fromLTRB(12, 8, 12, 16 + MediaQuery.of(context).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(
-                icon: Icon(
-                  Icons.add_circle_outline,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                onPressed: () => _showFeatureMenu(context),
-                constraints: BoxConstraints(
-                  minWidth: 40,
-                  minHeight: 40,
-                ),
-              ),
-              Expanded(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: 120,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.add_circle_outline,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    onPressed: () => _showFeatureMenu(context),
+                    constraints: BoxConstraints(
+                      minWidth: 40,
+                      minHeight: 40,
+                    ),
                   ),
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    keyboardType: TextInputType.multiline,
-                    maxLines: null,
-                    minLines: 1,
-                    style: TextStyle(fontSize: 14),
-                    onChanged: (text) {
-                      setState(() {
-                        _isComposing = text.trim().isNotEmpty;
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: '输入消息...',
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
+                  Expanded(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: 120,
+                      ),
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        keyboardType: TextInputType.multiline,
+                        maxLines: null,
+                        minLines: 1,
+                        style: TextStyle(fontSize: 14),
+                        onChanged: (text) {
+                          setState(() {
+                            _isComposing = text.trim().isNotEmpty;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: '输入消息...',
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(
+                              color: _isFocused
+                                  ? theme.colorScheme.primary.withOpacity(0.3)
+                                  : theme.colorScheme.outlineVariant.withOpacity(0.2),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildSendButton(context),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () => provider.toggleDeepThinking(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
                         vertical: 8,
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide(
-                          color: _isFocused
+                      decoration: BoxDecoration(
+                        color: provider.isDeepThinking 
+                            ? theme.colorScheme.primaryContainer.withOpacity(0.7)
+                            : theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: provider.isDeepThinking
                               ? theme.colorScheme.primary.withOpacity(0.3)
                               : theme.colorScheme.outlineVariant.withOpacity(0.2),
                         ),
                       ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.psychology,
+                            size: 16,
+                            color: provider.isDeepThinking
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '深度思考',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: provider.isDeepThinking
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              _buildSendButton(context),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              GestureDetector(
-                onTap: () => provider.toggleDeepThinking(),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: provider.isDeepThinking 
-                        ? theme.colorScheme.primaryContainer.withOpacity(0.7)
-                        : theme.colorScheme.surfaceVariant.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: provider.isDeepThinking
-                          ? theme.colorScheme.primary.withOpacity(0.3)
-                          : theme.colorScheme.outlineVariant.withOpacity(0.2),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.psychology,
-                        size: 16,
-                        color: provider.isDeepThinking
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
+                  GestureDetector(
+                    onTap: () => _showModelSelectionDialog(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '深度思考',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: provider.isDeepThinking
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              GestureDetector(
-                onTap: () => _showModelSelectionDialog(context),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: provider.isPro 
-                        ? theme.colorScheme.primaryContainer.withOpacity(0.7)
-                        : theme.colorScheme.surfaceVariant.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: provider.isPro
-                          ? theme.colorScheme.primary.withOpacity(0.3)
-                          : theme.colorScheme.outlineVariant.withOpacity(0.2),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.model_training,
-                        size: 16,
-                        color: provider.isPro
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        provider.isPro ? 'Pro' : '标准版',
-                        style: TextStyle(
-                          fontSize: 13,
+                      decoration: BoxDecoration(
+                        color: provider.isPro 
+                            ? theme.colorScheme.primaryContainer.withOpacity(0.7)
+                            : theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
                           color: provider.isPro
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurfaceVariant,
+                              ? theme.colorScheme.primary.withOpacity(0.3)
+                              : theme.colorScheme.outlineVariant.withOpacity(0.2),
                         ),
                       ),
-                    ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.model_training,
+                            size: 16,
+                            color: provider.isPro
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            provider.isPro ? 'Pro' : '标准版',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: provider.isPro
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

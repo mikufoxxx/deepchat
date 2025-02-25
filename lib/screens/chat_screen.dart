@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:deepchat/screens/settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +7,7 @@ import '../providers/chat_provider.dart';
 import '../widgets/chat_input.dart';
 import '../widgets/message_list.dart';
 import '../widgets/chat_drawer.dart';
+import 'package:flutter/rendering.dart';
 
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
@@ -25,7 +28,26 @@ class ChatScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(currentSession?.title ?? '新对话'),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: ClipRect(
+          child: Container(
+            height: kToolbarHeight + MediaQuery.of(context).padding.top,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+              child: Container(
+                color: Theme.of(context).colorScheme.surface.withOpacity(0.1),
+              ),
+            ),
+          ),
+        ),
+        title: Text(
+          currentSession?.title ?? '新对话',
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         leading: isWideScreen ? null : Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu),
