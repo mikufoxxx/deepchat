@@ -5,6 +5,7 @@ import '../providers/chat_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/upload_service.dart';
 import '../models/uploaded_item.dart';
+import '../services/document_service.dart';
 
 class ChatInput extends StatefulWidget {
   const ChatInput({super.key});
@@ -216,14 +217,10 @@ class _ChatInputState extends State<ChatInput> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: _isComposing && !provider.isResponding
-              ? () => _handleSend()
-              : null,
+          onTap: _canSend ? () => _handleSend() : null,
           borderRadius: BorderRadius.circular(20),
           child: IconButton(
-            onPressed: _isComposing && !provider.isResponding
-                ? () => _handleSend()
-                : null,
+            onPressed: _canSend ? () => _handleSend() : null,
             icon: provider.isResponding
                 ? SizedBox(
                     width: 24,
@@ -255,6 +252,11 @@ class _ChatInputState extends State<ChatInput> {
         ),
       ),
     );
+  }
+
+  bool get _canSend {
+    if (_uploadedItems.any((item) => item.isProcessing)) return false;
+    return _isComposing || _uploadedItems.isNotEmpty;
   }
 
   void _handleSend() async {
@@ -480,6 +482,7 @@ class _ChatInputState extends State<ChatInput> {
 
   Future<void> _handleImageUpload(ImageSource source) async {
     final uploadService = UploadService();
+    final documentService = DocumentService();
     
     try {
       final file = await uploadService.pickImage(source);
@@ -494,14 +497,45 @@ class _ChatInputState extends State<ChatInput> {
           }
           return;
         }
+
+        // 添加到列表，设置处理状态
+        final uploadedItem = UploadedItem(
+          file: file,
+          name: file.path.split('/').last,
+          type: 'image',
+          isProcessing: true,
+        );
         
         setState(() {
-          _uploadedItems.add(UploadedItem(
-            file: file,
-            name: file.path.split('/').last,
-            type: 'image',
-          ));
+          _uploadedItems.add(uploadedItem);
         });
+
+        // 使用 DocumentService 处理图片OCR
+        try {
+          print('开始处理图片OCR...');
+          final fileType = file.path.split('.').last.toLowerCase();
+          final ocrText = await documentService.extractText(file, fileType);
+          print('OCR处理完成，文本长度: ${ocrText?.length ?? 0}');
+          
+          setState(() {
+            uploadedItem.ocrText = ocrText;
+            uploadedItem.isProcessing = false;
+            uploadedItem.processProgress = 1.0;
+          });
+        } catch (e) {
+          print('OCR处理失败: $e');
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('OCR处理失败: $e')),
+            );
+          }
+          setState(() {
+            uploadedItem.isProcessing = false;
+            uploadedItem.processProgress = 0.0;
+            // 即使OCR失败也保留图片
+            uploadedItem.ocrText = '图片OCR处理失败，但您仍可以发送图片。';
+          });
+        }
       }
     } catch (e) {
       if (context.mounted) {
@@ -514,11 +548,13 @@ class _ChatInputState extends State<ChatInput> {
 
   Future<void> _handleFileUpload() async {
     final uploadService = UploadService();
+    final documentService = DocumentService();
     
     try {
       final file = await uploadService.pickFile();
       if (file != null) {
         final size = await file.length();
+        final fileType = file.path.split('.').last.toLowerCase();
         
         if (size > 20 * 1024 * 1024) {
           if (context.mounted) {
@@ -528,14 +564,40 @@ class _ChatInputState extends State<ChatInput> {
           }
           return;
         }
+
+        // 添加到列表，设置处理状态
+        final uploadedItem = UploadedItem(
+          file: file,
+          name: file.path.split('/').last,
+          type: 'file',
+          isProcessing: true,
+        );
         
         setState(() {
-          _uploadedItems.add(UploadedItem(
-            file: file,
-            name: file.path.split('/').last,
-            type: 'file',
-          ));
+          _uploadedItems.add(uploadedItem);
         });
+
+        // 处理文件内容
+        String? fileContent;
+        try {
+          fileContent = await documentService.extractText(file, fileType);
+          
+          setState(() {
+            uploadedItem.ocrText = fileContent;
+            uploadedItem.isProcessing = false;
+            uploadedItem.processProgress = 1.0;
+          });
+        } catch (e) {
+          print('文件处理失败: $e');
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('文件处理失败: $e')),
+            );
+          }
+          setState(() {
+            _uploadedItems.remove(uploadedItem);
+          });
+        }
       }
     } catch (e) {
       if (context.mounted) {
@@ -560,75 +622,104 @@ class _ChatInputState extends State<ChatInput> {
           final item = _uploadedItems[index];
           final theme = Theme.of(context);
           
-          return Container(
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceVariant.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: theme.colorScheme.outline.withOpacity(0.2),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (item.type == 'image')
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: Image.file(
-                      item.file,
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                else
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Icon(
-                      Icons.insert_drive_file,
-                      color: theme.colorScheme.primary,
-                    ),
+          return Stack(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceVariant.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: item.isProcessing 
+                        ? theme.colorScheme.primary 
+                        : theme.colorScheme.outline.withOpacity(0.2),
                   ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      item.name,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.colorScheme.onSurface,
+                    if (item.type == 'image')
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.file(
+                          item.file,
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    else
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Icon(
+                          Icons.insert_drive_file,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          item.name,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        if (item.isProcessing)
+                          Text(
+                            '正在处理...',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.primary,
+                            ),
+                          )
+                        else
+                          Text(
+                            '${(item.file.lengthSync() / 1024).toStringAsFixed(1)}KB',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
                     ),
-                    Text(
-                      '${(item.file.lengthSync() / 1024).toStringAsFixed(1)}KB',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: theme.colorScheme.onSurfaceVariant,
+                    if (!item.isProcessing) ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 16),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          setState(() {
+                            _uploadedItems.removeAt(index);
+                          });
+                        },
                       ),
-                    ),
+                    ],
                   ],
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 16),
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () {
-                    setState(() {
-                      _uploadedItems.removeAt(index);
-                    });
-                  },
+              ),
+              if (item.isProcessing)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: CircularProgressIndicator(
+                      value: item.processProgress,
+                      strokeWidth: 2,
+                    ),
+                  ),
                 ),
-              ],
-            ),
+            ],
           );
         },
       ),

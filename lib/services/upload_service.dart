@@ -26,7 +26,7 @@ class UploadService {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['txt', 'md', 'pdf', 'doc', 'docx'],
+        allowedExtensions: ['txt', 'md', 'pdf'],
       );
 
       if (result != null && result.files.single.path != null) {

@@ -14,6 +14,7 @@ import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../config/api_config.dart';
 import '../models/user_info.dart';
+import '../services/document_service.dart';
 
 class ChatProvider with ChangeNotifier {
   late final ApiService _apiService;
@@ -774,16 +775,26 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
     
     try {
+      final documentService = DocumentService();
       String fullContent = content;
       
       for (var file in files) {
+        final fileType = file.name.split('.').last.toLowerCase();
+        final fileDesc = documentService.getFileDescription(file.name, fileType);
+        
         if (file.type == 'image') {
+          // 对于图片，添加 base64 编码
           final bytes = await file.file.readAsBytes();
           final base64Image = base64Encode(bytes);
-          fullContent += '\n![${file.name}](data:image/png;base64,$base64Image)';
+          fullContent += '\n\n用户上传了一张名为 ${file.name} 的图片：\n![image]($base64Image)';
+          if (file.ocrText != null && file.ocrText!.isNotEmpty) {
+            fullContent += '\n图片中的文字内容是：\n${file.ocrText}';
+          }
         } else {
-          final fileContent = await file.file.readAsString();
-          fullContent += '\n\n文件 ${file.name} 的内容:\n```\n$fileContent\n```';
+          fullContent += '\n\n用户上传了一个名为 ${file.name} 的$fileDesc';
+          if (file.ocrText != null && file.ocrText!.isNotEmpty) {
+            fullContent += '，内容是：\n${file.ocrText}';
+          }
         }
       }
 
@@ -800,6 +811,10 @@ class ChatProvider with ChangeNotifier {
         _addMessage(errorMessage);
         notifyListeners();
       }
+    } finally {
+      _isStreaming = false;
+      _isResponding = false;
+      notifyListeners();
     }
   }
 }
