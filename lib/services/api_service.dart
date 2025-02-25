@@ -91,8 +91,7 @@ class ApiService {
                 yield '\n\n回答：';
                 isThinking = false;
               } else {
-                final trimmedContent = content.replaceFirst(RegExp(r'^\n+'), '');
-                yield trimmedContent;
+                yield content;
               }
             }
           } catch (e) {
