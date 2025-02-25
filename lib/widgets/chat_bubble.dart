@@ -67,11 +67,12 @@ class ChatBubble extends StatelessWidget {
   Widget _buildAssistantMessage(BuildContext context) {
     final theme = Theme.of(context);
     final provider = context.watch<ChatProvider>();
+    final isR1Message = message.model == 'r1';
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (provider.isDeepThinking && message.thoughtProcess != null)
+        if (isR1Message && message.thoughtProcess != null)
           ThinkingSection(message: message),
         if (!message.isThinking)
           Container(
@@ -215,8 +216,8 @@ class ThinkingStatus extends StatelessWidget {
           ),
         SizedBox(width: 6),
         Text(
-          isThinking ? '思考中...（用时${thinkingDuration}秒）' : 
-          '思考完毕（用时${thinkingDuration}秒）',
+          isThinking ? '思考中...' : 
+          '思考完毕',
           style: theme.textTheme.bodySmall?.copyWith(
             fontSize: 11,
             color: theme.colorScheme.outline,

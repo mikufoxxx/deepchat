@@ -3,9 +3,10 @@ class ChatMessage {
   final String role;
   final String content;
   final int sessionId;
+  final DateTime timestamp;
   final String? thoughtProcess;
   final bool isThinking;
-  final DateTime timestamp;
+  final String model;
 
   bool get isUser => role == 'user';
 
@@ -14,10 +15,11 @@ class ChatMessage {
     required this.role,
     required this.content,
     required this.sessionId,
+    DateTime? timestamp,
     this.thoughtProcess,
     this.isThinking = false,
-    DateTime? timestamp,
-  }) : this.timestamp = timestamp ?? DateTime.now();
+    this.model = '',
+  }) : timestamp = timestamp ?? DateTime.now();
 
   Map<String, dynamic> toJson() {
     return {
@@ -28,6 +30,7 @@ class ChatMessage {
       'thoughtProcess': thoughtProcess,
       'isThinking': isThinking,
       'timestamp': timestamp.toIso8601String(),
+      'model': model,
     };
   }
 
@@ -40,6 +43,7 @@ class ChatMessage {
       thoughtProcess: json['thoughtProcess'],
       isThinking: json['isThinking'] ?? false,
       timestamp: DateTime.parse(json['timestamp']),
+      model: json['model'] ?? '',
     );
   }
 
@@ -48,18 +52,20 @@ class ChatMessage {
     String? role,
     String? content,
     int? sessionId,
+    DateTime? timestamp,
     String? thoughtProcess,
     bool? isThinking,
-    DateTime? timestamp,
+    String? model,
   }) {
     return ChatMessage(
       id: id ?? this.id,
       role: role ?? this.role,
       content: content ?? this.content,
       sessionId: sessionId ?? this.sessionId,
+      timestamp: timestamp ?? this.timestamp,
       thoughtProcess: thoughtProcess ?? this.thoughtProcess,
       isThinking: isThinking ?? this.isThinking,
-      timestamp: timestamp ?? this.timestamp,
+      model: model ?? this.model,
     );
   }
 

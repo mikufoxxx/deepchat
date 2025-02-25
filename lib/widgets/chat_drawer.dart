@@ -116,9 +116,6 @@ class ChatDrawer extends StatelessWidget {
                                     }
                                     
                                     Navigator.of(context).pop();
-                                    if (!isWideScreen) {
-                                      Navigator.of(context).pop();
-                                    }
                                   },
                                   style: TextButton.styleFrom(
                                     foregroundColor: Colors.red,
@@ -133,8 +130,10 @@ class ChatDrawer extends StatelessWidget {
                       onTap: () {
                         if (!isSelected) {
                           onSessionSelected(session.id);
+                          if (!isWideScreen) {
+                            Navigator.pop(context);
+                          }
                         }
-                        Navigator.pop(context);
                       },
                     );
                   }).toList(),

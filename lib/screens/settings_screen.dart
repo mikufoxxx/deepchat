@@ -439,7 +439,7 @@ class _BasicSettingsTab extends StatelessWidget {
         const SizedBox(height: 8),
         TextField(
           controller: TextEditingController(text: provider.siliconflowApiKey),
-          onChanged: provider.updateSiliconflowApiKey,
+          onChanged: (value) => _saveApiKey(context, value, true),
           decoration: InputDecoration(
             hintText: 'sf-xxxxxx',
             isDense: true,
@@ -867,6 +867,19 @@ class _BasicSettingsTab extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _saveApiKey(BuildContext context, String key, bool isSiliconflow) {
+    final provider = context.read<ChatProvider>();
+    
+    if (isSiliconflow) {
+      provider.updateSiliconflowApiKey(key);
+    } else {
+      provider.updateDeepseekApiKey(key);
+    }
+
+    // 强制刷新对话页面
+    provider.refreshCurrentSession();
   }
 }
 

@@ -592,4 +592,11 @@ class ChatProvider with ChangeNotifier {
     _completedMessages.remove(messageId);
     notifyListeners();
   }
+
+  void refreshCurrentSession() {
+    if (currentSession != null) {
+      _currentSessionId = currentSession!.id;
+      notifyListeners();
+    }
+  }
 }
