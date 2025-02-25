@@ -8,6 +8,8 @@ class StorageService {
   static const String _apiKeyKey = 'api_key';
   static const String _favoriteMessagesKey = 'favorite_messages';
   static const String _lastUsedModelKey = 'last_used_model';
+  static const String _isDeepThinkingKey = 'is_deep_thinking';
+  static const String _isProKey = 'is_pro';
 
   final SharedPreferences _prefs;
 
@@ -75,5 +77,21 @@ class StorageService {
 
   Future<void> saveLastUsedModel(String model) async {
     await _prefs.setString(_lastUsedModelKey, model);
+  }
+
+  Future<bool?> getIsDeepThinking() async {
+    return _prefs.getBool(_isDeepThinkingKey);
+  }
+
+  Future<void> saveIsDeepThinking(bool value) async {
+    await _prefs.setBool(_isDeepThinkingKey, value);
+  }
+
+  Future<bool?> getIsPro() async {
+    return _prefs.getBool(_isProKey);
+  }
+
+  Future<void> saveIsPro(bool value) async {
+    await _prefs.setBool(_isProKey, value);
   }
 } 
