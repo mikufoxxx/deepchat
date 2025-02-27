@@ -23,19 +23,24 @@ class UploadService {
   }
 
   Future<File?> pickFile() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['txt', 'md', 'pdf'],
-      );
+  try {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: [
+        'txt', 'md', 'pdf',
+        'js', 'ts', 'py', 'java', 'cpp', 'c', 'cs',
+        'html', 'css', 'dart', 'sql', 'sh', 'bat',
+        'json', 'yaml', 'xml'
+      ],
+    );
 
-      if (result != null && result.files.single.path != null) {
-        return File(result.files.single.path!);
-      }
-      return null;
-    } catch (e) {
-      print('选择文件失败: $e');
-      return null;
+    if (result != null && result.files.single.path != null) {
+      return File(result.files.single.path!);
     }
+    return null;
+  } catch (e) {
+    print('选择文件失败: $e');
+    return null;
   }
+}
 } 
