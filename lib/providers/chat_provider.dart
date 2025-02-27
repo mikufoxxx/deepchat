@@ -200,6 +200,7 @@ class ChatProvider with ChangeNotifier {
         content: content,
         sessionId: _currentSessionId,
         timestamp: DateTime.now(),
+        attachments: _uploadedItems.isNotEmpty ? List.from(_uploadedItems) : null,
       );
       
       _addMessage(userMessage);

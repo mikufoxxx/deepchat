@@ -49,38 +49,102 @@ class ChatBubble extends StatelessWidget {
 
   Widget _buildUserMessage(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: MarkdownBody(
-        data: message.content,
-        selectable: true,
-        styleSheet: MarkdownStyleSheet(
-          p: TextStyle(
-            fontSize: 15,
-            height: 1.5,
-            color: theme.colorScheme.onSurface,
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (message.attachments != null && message.attachments!.isNotEmpty)
+          Container(
+            margin: EdgeInsets.only(bottom: 4),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.end,
+              children: message.attachments!.map((item) {
+                if (item.type == 'image' && item.file.existsSync()) {
+                  return Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: theme.colorScheme.outline.withOpacity(0.2),
+                      ),
+                      image: DecorationImage(
+                        image: FileImage(item.file),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  );
+                } else {
+                  return Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceVariant.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: theme.colorScheme.outline.withOpacity(0.2),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.insert_drive_file,
+                          size: 16,
+                          color: theme.colorScheme.primary,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          item.name,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              }).toList(),
+            ),
           ),
-          code: TextStyle(
-            fontSize: 14,
-            backgroundColor: theme.colorScheme.surfaceVariant.withOpacity(0.5),
-            color: theme.colorScheme.primary,
+        Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.8
           ),
-          codeblockDecoration: BoxDecoration(
-            color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(8),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: MarkdownBody(
+            data: message.content,
+            selectable: true,
+            styleSheet: MarkdownStyleSheet(
+              p: TextStyle(
+                fontSize: 15,
+                height: 1.5,
+                color: theme.colorScheme.onSurface,
+              ),
+              code: TextStyle(
+                fontSize: 14,
+                backgroundColor: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                color: theme.colorScheme.primary,
+              ),
+              codeblockDecoration: BoxDecoration(
+                color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onTapLink: (text, href, title) {
+              if (href != null) {
+                launchUrl(Uri.parse(href));
+              }
+            },
           ),
         ),
-        onTapLink: (text, href, title) {
-          if (href != null) {
-            launchUrl(Uri.parse(href));
-          }
-        },
-      ),
+      ],
     );
   }
 
