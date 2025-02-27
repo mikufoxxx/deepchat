@@ -113,14 +113,14 @@ class ApiService {
         'messages': [
           {
             'role': 'system',
-            'content': '请根据对话内容生成一个简短的主题（不超过10个字），直接返回主题文本，不要添加任何解释或标点符号。',
+            'content': '请根据用户的问题和AI的回答生成一个简短的对话主题（不超过15个字），直接返回主题文本，不要添加任何解释或标点符号。',
           },
           ...messages.map((msg) => {
             'role': msg.role,
             'content': msg.content,
           }).toList(),
         ],
-        'temperature': 0.7,
+        'temperature': 0.8,
         'stream': false,
       });
 

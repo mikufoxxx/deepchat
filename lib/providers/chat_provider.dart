@@ -480,11 +480,11 @@ class ChatProvider with ChangeNotifier {
 
 
   bool _shouldGenerateTitle(ChatSession session) {
-    // 只有当会话有两条消息(一问一答)且标题是默认的"新对话"时才生成
     return session.messages.length >= 2 && 
            session.title == '新对话' &&
            session.messages[0].role == 'user' &&
-           session.messages[1].role == 'assistant';
+           session.messages[1].role == 'assistant' &&
+           !session.messages[1].isThinking;
   }
 
   Future<void> _generateTitle(ChatSession session) async {
@@ -495,11 +495,12 @@ class ChatProvider with ChangeNotifier {
       ChatMessage(
         id: 'system_${DateTime.now().millisecondsSinceEpoch}',
         role: 'system',
-        content: '请根据用户的问题生成一个简短的标题（不超过15个字）。不要加引号，不要解释。',
+        content: '请根据用户的问题和AI的回答生成一个简短的对话主题（不超过15个字）。不要加引号，不要解释。',
         sessionId: _currentSessionId,
         timestamp: DateTime.now(),
       ),
       session.messages[0], // 用户的问题
+      session.messages[1], // AI的回答
     ];
 
     try {
