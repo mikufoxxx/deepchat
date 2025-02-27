@@ -42,7 +42,7 @@ class ChatProvider with ChangeNotifier {
   UserInfo? _cachedUserInfo;
   bool _isBalanceRefreshing = false;
   List<UploadedItem> _uploadedItems = [];
-  final List<UploadedItem> _documentContext = [];
+  List<UploadedItem> _documentContext = [];
 
   ChatProvider(this._storage) {
     _apiService = ApiService();
@@ -111,6 +111,9 @@ class ChatProvider with ChangeNotifier {
     _sessions.add(newSession);
     _currentSessionId = newSession.id;
     
+    // 加载文档上下文
+    _documentContext = _storage.loadDocumentContext();
+    
     _apiService.updateModel(currentModel);
     _apiService.updateApiKey(_apiKey);
     
@@ -169,7 +172,8 @@ class ChatProvider with ChangeNotifier {
     );
     
     _sessions.add(newSession);
-    _documentContext.clear(); // 清除文档上下文
+    _documentContext.clear();
+    _storage.saveDocumentContext(_documentContext);  // 保存清空后的上下文
     _currentSessionId = newSession.id;
     _saveSessions();
     notifyListeners();
@@ -203,6 +207,7 @@ class ChatProvider with ChangeNotifier {
         }
         // 将当前上传的文件添加到上下文中
         _documentContext.addAll(_uploadedItems);
+        _storage.saveDocumentContext(_documentContext);  // 保存更新后的上下文
       }
       
       fullContent += content.isNotEmpty ? '用户说：$content' : '';
@@ -816,6 +821,7 @@ class ChatProvider with ChangeNotifier {
 
   void clearDocumentContext() {
     _documentContext.clear();
+    _storage.saveDocumentContext(_documentContext);
     notifyListeners();
   }
 }

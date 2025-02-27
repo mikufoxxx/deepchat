@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/chat_session.dart';
 import '../models/chat_message.dart';
+import '../models/uploaded_item.dart';
+import 'dart:io';
 
 class StorageService {
   static const String _sessionsKey = 'chat_sessions';
@@ -10,6 +12,7 @@ class StorageService {
   static const String _lastUsedModelKey = 'last_used_model';
   static const String _isDeepThinkingKey = 'is_deep_thinking';
   static const String _isProKey = 'is_pro';
+  static const String _documentContextKey = 'document_context';
 
   final SharedPreferences _prefs;
 
@@ -93,5 +96,34 @@ class StorageService {
 
   Future<void> saveIsPro(bool value) async {
     await _prefs.setBool(_isProKey, value);
+  }
+
+  // 保存文档上下文
+  Future<void> saveDocumentContext(List<UploadedItem> items) async {
+    final contextJson = items.map((item) => {
+      'name': item.name,
+      'type': item.type,
+      'ocrText': item.ocrText,
+    }).toList();
+    await _prefs.setString(_documentContextKey, jsonEncode(contextJson));
+  }
+
+  // 读取文档上下文
+  List<UploadedItem> loadDocumentContext() {
+    final String? contextJson = _prefs.getString(_documentContextKey);
+    if (contextJson == null) return [];
+
+    try {
+      final List<dynamic> decoded = jsonDecode(contextJson);
+      return decoded.map((json) => UploadedItem(
+        file: File(''), // 从存储恢复时文件引用会丢失
+        name: json['name'] as String,
+        type: json['type'] as String,
+        ocrText: json['ocrText'] as String?,
+      )).toList();
+    } catch (e) {
+      print('加载文档上下文失败: $e');
+      return [];
+    }
   }
 } 
