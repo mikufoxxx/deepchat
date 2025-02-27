@@ -18,4 +18,38 @@ class UploadedItem {
     this.isProcessing = false,
     this.processProgress = 0.0,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'type': type,
+      'thumbnail': thumbnail,
+      'ocrText': ocrText,
+      'isProcessing': isProcessing,
+      'processProgress': processProgress,
+    };
+  }
+
+  factory UploadedItem.fromJson(Map<String, dynamic> json) {
+    return UploadedItem(
+      file: File(''), // 从 JSON 恢复时文件引用会丢失
+      name: json['name'] as String,
+      type: json['type'] as String,
+      thumbnail: json['thumbnail'] as String?,
+      ocrText: json['ocrText'] as String?,
+      isProcessing: json['isProcessing'] as bool? ?? false,
+      processProgress: json['processProgress'] as double? ?? 0.0,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UploadedItem &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          type == other.type;
+
+  @override
+  int get hashCode => name.hashCode ^ type.hashCode;
 } 

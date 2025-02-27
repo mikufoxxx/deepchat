@@ -42,7 +42,6 @@ class ChatProvider with ChangeNotifier {
   UserInfo? _cachedUserInfo;
   bool _isBalanceRefreshing = false;
   List<UploadedItem> _uploadedItems = [];
-  List<UploadedItem> _documentContext = [];
 
   ChatProvider(this._storage) {
     _apiService = ApiService();
@@ -111,9 +110,6 @@ class ChatProvider with ChangeNotifier {
     _sessions.add(newSession);
     _currentSessionId = newSession.id;
     
-    // 加载文档上下文
-    _documentContext = _storage.loadDocumentContext();
-    
     _apiService.updateModel(currentModel);
     _apiService.updateApiKey(_apiKey);
     
@@ -153,28 +149,18 @@ class ChatProvider with ChangeNotifier {
       notifyListeners();
       return;
     }
-    // 检查当前会话是否为空
-    final currentSession = _sessions.firstWhere(
-      (session) => session.id == _currentSessionId,
-      orElse: () => ChatSession(id: -1, title: '', messages: []),
-    );
     
-    // 如果当前会话没有消息，直接删除它
-    if (currentSession.messages.isEmpty && currentSession.id != -1) {
-      _sessions.removeWhere((session) => session.id == currentSession.id);
-    }
-
     final newSessionId = DateTime.now().millisecondsSinceEpoch;
     final newSession = ChatSession(
       id: newSessionId,
       title: '新对话',
       messages: [],
+      documentContext: [], // 新会话的文档上下文为空
     );
     
     _sessions.add(newSession);
-    _documentContext.clear();
-    _storage.saveDocumentContext(_documentContext);  // 保存清空后的上下文
     _currentSessionId = newSession.id;
+    _uploadedItems.clear(); // 清空当前上传列表
     _saveSessions();
     notifyListeners();
   }
@@ -183,16 +169,18 @@ class ChatProvider with ChangeNotifier {
   Future<void> sendMessage(String content) async {
     if (_isStreaming || content.trim().isEmpty) return;
     
+    final session = currentSession;
+    if (session == null) return;
+    
     _isStreaming = true;
     _isResponding = true;
     notifyListeners();
     
     try {
-      // 构建完整的请求内容，包含所有文档上下文
       String fullContent = '';
       
-      // 添加所有文档上下文
-      for (var item in _documentContext) {
+      // 使用当前会话的文档上下文
+      for (var item in session.documentContext) {
         if (item.ocrText != null && item.ocrText!.isNotEmpty) {
           fullContent += '用户之前上传的文件${item.name}的内容为：${item.ocrText}\n\n';
         }
@@ -205,9 +193,15 @@ class ChatProvider with ChangeNotifier {
             fullContent += '用户刚刚上传了一个名为${item.name}的文件，内容为：${item.ocrText}\n\n';
           }
         }
-        // 将当前上传的文件添加到上下文中
-        _documentContext.addAll(_uploadedItems);
-        _storage.saveDocumentContext(_documentContext);  // 保存更新后的上下文
+        
+        // 将当前上传的文件添加到当前会话的上下文中
+        final updatedSession = session.copyWith(
+          documentContext: [...session.documentContext, ..._uploadedItems],
+        );
+        _sessions = _sessions.map((s) => 
+          s.id == session.id ? updatedSession : s
+        ).toList();
+        _saveSessions();
       }
       
       fullContent += content.isNotEmpty ? '用户说：$content' : '';
@@ -816,12 +810,6 @@ class ChatProvider with ChangeNotifier {
 
   void removeUploadedItem(UploadedItem item) {
     _uploadedItems.remove(item);
-    notifyListeners();
-  }
-
-  void clearDocumentContext() {
-    _documentContext.clear();
-    _storage.saveDocumentContext(_documentContext);
     notifyListeners();
   }
 }
