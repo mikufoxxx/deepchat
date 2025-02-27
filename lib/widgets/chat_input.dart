@@ -204,12 +204,12 @@ class _ChatInputState extends State<ChatInput> {
       height: 40,
       width: 40,
       decoration: BoxDecoration(
-        color: _isComposing 
+        color: _canSend 
             ? theme.colorScheme.primary 
             : theme.colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: _isComposing
+          color: _canSend
               ? theme.colorScheme.primary.withOpacity(0.3)
               : theme.colorScheme.outlineVariant.withOpacity(0.2),
         ),
@@ -232,16 +232,12 @@ class _ChatInputState extends State<ChatInput> {
               : Icon(
                   Icons.send,
                   color: _canSend
-                    ? theme.colorScheme.primary
+                    ? Colors.white
                     : theme.colorScheme.onSurface.withOpacity(0.38),
                 ),
             style: IconButton.styleFrom(
-              backgroundColor: _isComposing
-                  ? theme.colorScheme.primary
-                  : null,
-              foregroundColor: _isComposing
-                  ? Colors.white
-                  : theme.colorScheme.onSurfaceVariant,
+              padding: EdgeInsets.zero,
+              backgroundColor: Colors.transparent,
             ),
           ),
         ),
