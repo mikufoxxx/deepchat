@@ -167,7 +167,7 @@ class ChatProvider with ChangeNotifier {
 
   // 发送消息
   Future<void> sendMessage(String content) async {
-    if (_isStreaming || content.trim().isEmpty) return;
+    if (_isStreaming || (content.trim().isEmpty && _uploadedItems.isEmpty)) return;
     
     final session = currentSession;
     if (session == null) return;
@@ -182,7 +182,7 @@ class ChatProvider with ChangeNotifier {
       // 使用当前会话的文档上下文
       for (var item in session.documentContext) {
         if (item.ocrText != null && item.ocrText!.isNotEmpty) {
-          fullContent += '用户之前上传的文件${item.name}的内容为：${item.ocrText}\n\n';
+          fullContent += '用户之前上传的${item.type == 'image' ? '图片' : '文件'}${item.name}的内容为：${item.ocrText}\n\n';
         }
       }
       
@@ -190,7 +190,7 @@ class ChatProvider with ChangeNotifier {
       if (_uploadedItems.isNotEmpty) {
         for (var item in _uploadedItems) {
           if (item.ocrText != null && item.ocrText!.isNotEmpty) {
-            fullContent += '用户刚刚上传了一个名为${item.name}的文件，内容为：${item.ocrText}\n\n';
+            fullContent += '用户刚刚上传了一个${item.type == 'image' ? '图片' : '文件'}${item.name}，内容为：${item.ocrText}\n\n';
           }
         }
         
@@ -204,21 +204,18 @@ class ChatProvider with ChangeNotifier {
         _saveSessions();
       }
       
-      fullContent += content.isNotEmpty ? '用户说：$content' : '';
+      fullContent += content;
 
-      // 用户消息气泡只显示当前上传的文件
+      // 创建消息对象
       final userMessage = ChatMessage(
-        id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
         role: 'user',
         content: content,
-        sessionId: _currentSessionId,
-        timestamp: DateTime.now(),
-        attachments: _uploadedItems.isNotEmpty ? List.from(_uploadedItems) : null,
+        sessionId: session.id,
+        attachments: List.from(_uploadedItems),
       );
-      
+
       _addMessage(userMessage);
-      
-      // 清空当前上传列表，但保留在上下文中
       _uploadedItems.clear();
       
       // 使用完整内容发送请求

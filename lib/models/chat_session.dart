@@ -39,13 +39,13 @@ class ChatSession {
 
   factory ChatSession.fromJson(Map<String, dynamic> json) {
     return ChatSession(
-      id: json['id'] as int,
-      title: json['title'] as String,
+      id: json['id'],
+      title: json['title'],
       messages: (json['messages'] as List)
-          .map((msg) => ChatMessage.fromJson(msg as Map<String, dynamic>))
+          .map((msg) => ChatMessage.fromJson(msg))
           .toList(),
       documentContext: (json['documentContext'] as List?)
-          ?.map((item) => UploadedItem.fromJson(item as Map<String, dynamic>))
+          ?.map((item) => UploadedItem.fromJson(item))
           .toList() ?? [],
     );
   }

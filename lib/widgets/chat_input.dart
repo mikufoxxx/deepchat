@@ -511,6 +511,10 @@ class _ChatInputState extends State<ChatInput> {
           final ocrText = await documentService.extractText(file, fileType);
           print('OCR处理完成，文本长度: ${ocrText?.length ?? 0}');
           
+          if (context.mounted) {
+            context.read<ChatProvider>().addUploadedItem(uploadedItem);
+          }
+          
           setState(() {
             uploadedItem.ocrText = ocrText;
             uploadedItem.isProcessing = false;
@@ -526,8 +530,7 @@ class _ChatInputState extends State<ChatInput> {
           setState(() {
             uploadedItem.isProcessing = false;
             uploadedItem.processProgress = 0.0;
-            // 即使OCR失败也保留图片
-            uploadedItem.ocrText = '图片OCR处理失败，但您仍可以发送图片。';
+            uploadedItem.ocrText = '图片OCR处理失败';
           });
         }
       }
