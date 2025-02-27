@@ -42,6 +42,7 @@ class ChatProvider with ChangeNotifier {
   UserInfo? _cachedUserInfo;
   bool _isBalanceRefreshing = false;
   List<UploadedItem> _uploadedItems = [];
+  final List<UploadedItem> _documentContext = [];
 
   ChatProvider(this._storage) {
     _apiService = ApiService();
@@ -168,6 +169,7 @@ class ChatProvider with ChangeNotifier {
     );
     
     _sessions.add(newSession);
+    _documentContext.clear(); // 清除文档上下文
     _currentSessionId = newSession.id;
     _saveSessions();
     notifyListeners();
@@ -182,18 +184,30 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
     
     try {
-      // 构建完整的请求内容
+      // 构建完整的请求内容，包含所有文档上下文
       String fullContent = '';
+      
+      // 添加所有文档上下文
+      for (var item in _documentContext) {
+        if (item.ocrText != null && item.ocrText!.isNotEmpty) {
+          fullContent += '用户之前上传的文件${item.name}的内容为：${item.ocrText}\n\n';
+        }
+      }
+      
+      // 添加当前上传的文件内容
       if (_uploadedItems.isNotEmpty) {
         for (var item in _uploadedItems) {
           if (item.ocrText != null && item.ocrText!.isNotEmpty) {
-            fullContent += '用户上传了一个名为${item.name}的文件，内容为：${item.ocrText}\n\n';
+            fullContent += '用户刚刚上传了一个名为${item.name}的文件，内容为：${item.ocrText}\n\n';
           }
         }
+        // 将当前上传的文件添加到上下文中
+        _documentContext.addAll(_uploadedItems);
       }
+      
       fullContent += content.isNotEmpty ? '用户说：$content' : '';
 
-      // 只显示用户输入的消息在气泡中
+      // 用户消息气泡只显示当前上传的文件
       final userMessage = ChatMessage(
         id: 'user_${DateTime.now().millisecondsSinceEpoch}',
         role: 'user',
@@ -205,7 +219,7 @@ class ChatProvider with ChangeNotifier {
       
       _addMessage(userMessage);
       
-      // 发送消息后清空上传列表
+      // 清空当前上传列表，但保留在上下文中
       _uploadedItems.clear();
       
       // 使用完整内容发送请求
@@ -797,6 +811,11 @@ class ChatProvider with ChangeNotifier {
 
   void removeUploadedItem(UploadedItem item) {
     _uploadedItems.remove(item);
+    notifyListeners();
+  }
+
+  void clearDocumentContext() {
+    _documentContext.clear();
     notifyListeners();
   }
 }
