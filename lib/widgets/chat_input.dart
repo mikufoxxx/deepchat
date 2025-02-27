@@ -221,25 +221,20 @@ class _ChatInputState extends State<ChatInput> {
           borderRadius: BorderRadius.circular(20),
           child: IconButton(
             onPressed: _canSend ? () => _handleSend() : null,
-            icon: provider.isResponding
-                ? SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        _isComposing
-                            ? Colors.white
-                            : theme.colorScheme.primary,
-                      ),
-                    ),
-                  )
-                : Icon(
-                    Icons.send,
-                    color: _isComposing
-                        ? Colors.white
-                        : theme.colorScheme.onSurfaceVariant,
+            icon: _uploadedItems.any((item) => item.isProcessing)
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
                   ),
+                )
+              : Icon(
+                  Icons.send,
+                  color: _canSend
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface.withOpacity(0.38),
+                ),
             style: IconButton.styleFrom(
               backgroundColor: _isComposing
                   ? theme.colorScheme.primary
@@ -256,7 +251,7 @@ class _ChatInputState extends State<ChatInput> {
 
   bool get _canSend {
     if (_uploadedItems.any((item) => item.isProcessing)) return false;
-    return _isComposing || _uploadedItems.isNotEmpty;
+    return _isComposing || (_uploadedItems.isNotEmpty && _uploadedItems.every((item) => !item.isProcessing));
   }
 
   void _handleSend() async {
