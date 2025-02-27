@@ -808,6 +808,27 @@ class ChatProvider with ChangeNotifier {
 
   void removeUploadedItem(UploadedItem item) {
     _uploadedItems.remove(item);
+    
+    if (currentSession != null) {
+      // 创建一个新的可修改列表
+      final updatedContext = List<UploadedItem>.from(currentSession!.documentContext)
+        ..removeWhere((i) => i.name == item.name && i.type == item.type);
+      
+      // 使用 copyWith 创建新的 session
+      final updatedSession = currentSession!.copyWith(
+        documentContext: updatedContext,
+      );
+      
+      // 更新 sessions 列表
+      _sessions = _sessions.map((s) => 
+        s.id == currentSession!.id ? updatedSession : s
+      ).toList();
+      
+      // 更新当前 session
+      _currentSessionId = updatedSession.id;
+    }
+    
+    _saveSessions();
     notifyListeners();
   }
 }
