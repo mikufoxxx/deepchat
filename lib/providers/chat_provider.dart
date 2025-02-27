@@ -14,7 +14,6 @@ import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../config/api_config.dart';
 import '../models/user_info.dart';
-import '../services/document_service.dart';
 
 class ChatProvider with ChangeNotifier {
   late final ApiService _apiService;
@@ -42,6 +41,7 @@ class ChatProvider with ChangeNotifier {
   bool _shouldScrollToBottom = false;
   UserInfo? _cachedUserInfo;
   bool _isBalanceRefreshing = false;
+  List<UploadedItem> _uploadedItems = [];
 
   ChatProvider(this._storage) {
     _apiService = ApiService();
@@ -178,10 +178,22 @@ class ChatProvider with ChangeNotifier {
     if (_isStreaming || content.trim().isEmpty) return;
     
     _isStreaming = true;
-    _isResponding = true;  // 开始响应
+    _isResponding = true;
     notifyListeners();
     
     try {
+      // 构建完整的请求内容
+      String fullContent = '';
+      if (_uploadedItems.isNotEmpty) {
+        for (var item in _uploadedItems) {
+          if (item.ocrText != null && item.ocrText!.isNotEmpty) {
+            fullContent += '用户上传了一个名为${item.name}的文件，内容为：${item.ocrText}\n\n';
+          }
+        }
+      }
+      fullContent += content.isNotEmpty ? '用户说：$content' : '';
+
+      // 只显示用户输入的消息在气泡中
       final userMessage = ChatMessage(
         id: 'user_${DateTime.now().millisecondsSinceEpoch}',
         role: 'user',
@@ -192,12 +204,21 @@ class ChatProvider with ChangeNotifier {
       
       _addMessage(userMessage);
       
+      // 使用完整内容发送请求
       var thoughtProcess = '';
       var response = '';
       final startTime = DateTime.now();
       
       _streamSubscription = _apiService
-          .getChatCompletionStream(currentMessages, _siliconflowApiKey, _temperature)
+          .getChatCompletionStream([
+            ChatMessage(
+              id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+              role: 'user',
+              content: fullContent,
+              sessionId: _currentSessionId,
+              timestamp: DateTime.now(),
+            )
+          ], _siliconflowApiKey, _temperature)
           .listen(
         (chunk) {
           if (DateTime.now().difference(_lastNotifyTime).inMilliseconds > 100) {
@@ -251,16 +272,14 @@ class ChatProvider with ChangeNotifier {
             notifyListeners();
           }
           
-          // 检查是否是第一轮对话完成
           final session = currentSession;
           if (session != null && _isFirstRoundComplete(session)) {
             await _generateTitle(session);
           }
-          _isResponding = false;  // 响应完成
+          _isResponding = false;
           notifyListeners();
         },
       );
-
     } catch (e) {
       final errorMessage = ChatMessage(
         id: 'error_${DateTime.now().millisecondsSinceEpoch}',
@@ -269,7 +288,7 @@ class ChatProvider with ChangeNotifier {
         sessionId: _currentSessionId,
       );
       _addMessage(errorMessage);
-      _isResponding = false;  // 发生错误时也要重置状态
+      _isResponding = false;
       notifyListeners();
     }
 
@@ -767,54 +786,13 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  Future<void> sendMessagesWithFiles(String content, List<UploadedItem> files) async {
-    if (_isStreaming) return;
-    
-    _isStreaming = true;
-    _isResponding = true;
+  void addUploadedItem(UploadedItem item) {
+    _uploadedItems.add(item);
     notifyListeners();
-    
-    try {
-      final documentService = DocumentService();
-      String fullContent = content;
-      
-      for (var file in files) {
-        final fileType = file.name.split('.').last.toLowerCase();
-        final fileDesc = documentService.getFileDescription(file.name, fileType);
-        
-        if (file.type == 'image') {
-          // 对于图片，添加 base64 编码
-          final bytes = await file.file.readAsBytes();
-          final base64Image = base64Encode(bytes);
-          fullContent += '\n\n用户上传了一张名为 ${file.name} 的图片：\n![image]($base64Image)';
-          if (file.ocrText != null && file.ocrText!.isNotEmpty) {
-            fullContent += '\n图片中的文字内容是：\n${file.ocrText}';
-          }
-        } else {
-          fullContent += '\n\n用户上传了一个名为 ${file.name} 的$fileDesc';
-          if (file.ocrText != null && file.ocrText!.isNotEmpty) {
-            fullContent += '，内容是：\n${file.ocrText}';
-          }
-        }
-      }
+  }
 
-      await sendMessage(fullContent);
-      
-    } catch (e) {
-      if (currentSession != null) {
-        final errorMessage = ChatMessage(
-          id: 'error_${DateTime.now().millisecondsSinceEpoch}',
-          role: 'assistant',
-          content: '处理文件失败：$e',
-          sessionId: _currentSessionId,
-        );
-        _addMessage(errorMessage);
-        notifyListeners();
-      }
-    } finally {
-      _isStreaming = false;
-      _isResponding = false;
-      notifyListeners();
-    }
+  void removeUploadedItem(UploadedItem item) {
+    _uploadedItems.remove(item);
+    notifyListeners();
   }
 }

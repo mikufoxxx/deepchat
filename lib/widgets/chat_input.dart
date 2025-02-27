@@ -261,7 +261,7 @@ class _ChatInputState extends State<ChatInput> {
 
   void _handleSend() async {
     final content = _controller.text.trim();
-    if ((content.isEmpty && _uploadedItems.isEmpty) || !mounted) return;
+    if (content.isEmpty && _uploadedItems.isEmpty || !mounted) return;
 
     setState(() {
       _isComposing = false;
@@ -269,17 +269,11 @@ class _ChatInputState extends State<ChatInput> {
     _controller.clear();
     
     final provider = context.read<ChatProvider>();
+    await provider.sendMessage(content);
     
-    if (_uploadedItems.isNotEmpty) {
-      // 如果有上传的文件，使用新的发送方法
-      await provider.sendMessagesWithFiles(content, _uploadedItems);
-      setState(() {
-        _uploadedItems.clear(); // 发送后清空上传列表
-      });
-    } else {
-      // 如果只有文本消息，使用原来的发送方法
-      await provider.sendMessage(content);
-    }
+    setState(() {
+      _uploadedItems.clear(); // 发送后清空上传列表
+    });
   }
 
   void _showModelSelectionDialog(BuildContext context) {
@@ -554,12 +548,11 @@ class _ChatInputState extends State<ChatInput> {
       final file = await uploadService.pickFile();
       if (file != null) {
         final size = await file.length();
-        final fileType = file.path.split('.').last.toLowerCase();
         
-        if (size > 20 * 1024 * 1024) {
+        if (size > 10 * 1024 * 1024) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('文件大小不能超过20MB')),
+              const SnackBar(content: Text('文件大小不能超过10MB')),
             );
           }
           return;
@@ -577,16 +570,23 @@ class _ChatInputState extends State<ChatInput> {
           _uploadedItems.add(uploadedItem);
         });
 
-        // 处理文件内容
-        String? fileContent;
+        // 使用 DocumentService 处理文件
         try {
-          fileContent = await documentService.extractText(file, fileType);
+          print('开始处理文件...');
+          final fileType = file.path.split('.').last.toLowerCase();
+          final extractedText = await documentService.extractText(file, fileType);
+          print('文件处理完成，文本长度: ${extractedText?.length ?? 0}');
           
           setState(() {
-            uploadedItem.ocrText = fileContent;
+            uploadedItem.ocrText = extractedText;  // 确保这里设置了提取的文本
             uploadedItem.isProcessing = false;
             uploadedItem.processProgress = 1.0;
           });
+
+          // 添加到 Provider 中
+          if (context.mounted) {
+            context.read<ChatProvider>().addUploadedItem(uploadedItem);  // 确保这里添加了上传项
+          }
         } catch (e) {
           print('文件处理失败: $e');
           if (context.mounted) {
@@ -595,16 +595,14 @@ class _ChatInputState extends State<ChatInput> {
             );
           }
           setState(() {
-            _uploadedItems.remove(uploadedItem);
+            uploadedItem.isProcessing = false;
+            uploadedItem.processProgress = 0.0;
+            uploadedItem.ocrText = '文件处理失败，但您仍可以发送文件。';
           });
         }
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('选择文件失败: $e')),
-        );
-      }
+      print('选择文件失败: $e');
     }
   }
 
