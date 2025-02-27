@@ -120,7 +120,7 @@ class ApiService {
             'content': msg.content,
           }).toList(),
         ],
-        'temperature': 0.8,
+        'temperature': 0.3,
         'stream': false,
       });
 

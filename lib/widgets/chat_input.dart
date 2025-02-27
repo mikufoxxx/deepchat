@@ -8,6 +8,7 @@ import '../models/uploaded_item.dart';
 import '../services/document_service.dart';
 import '../widgets/wave_progress.dart';
 import 'dart:async';
+import 'dart:io' show Platform;
 
 class ChatInput extends StatefulWidget {
   const ChatInput({super.key});
@@ -367,6 +368,8 @@ class _ChatInputState extends State<ChatInput> {
                       Navigator.pop(context);
                       _handleImageUpload(ImageSource.camera);
                     },
+                    disabled: _isDesktop,
+                    disabledReason: _isDesktop ? 'Windows 系统不支持相机功能' : null,
                   ),
                   _buildFeatureItem(
                     context,
@@ -377,6 +380,8 @@ class _ChatInputState extends State<ChatInput> {
                       Navigator.pop(context);
                       _handleImageUpload(ImageSource.gallery);
                     },
+                    disabled: _isDesktop,
+                    disabledReason: _isDesktop ? 'Windows 系统不支持图片选择' : null,
                   ),
                   _buildFeatureItem(
                     context,
@@ -398,6 +403,8 @@ class _ChatInputState extends State<ChatInput> {
     );
   }
 
+  bool get _isDesktop => Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+
   Widget _buildFeatureItem(
     BuildContext context, {
     required IconData icon,
@@ -405,11 +412,13 @@ class _ChatInputState extends State<ChatInput> {
     required String subtitle,
     required VoidCallback onTap,
     bool showBorder = true,
+    bool disabled = false,
+    String? disabledReason,
   }) {
     final theme = Theme.of(context);
     
     return InkWell(
-      onTap: onTap,
+      onTap: disabled ? null : onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -421,17 +430,11 @@ class _ChatInputState extends State<ChatInput> {
         ),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                size: 24,
-                color: theme.colorScheme.primary,
-              ),
+            Icon(
+              icon,
+              color: disabled 
+                  ? theme.colorScheme.onSurface.withOpacity(0.38)
+                  : theme.colorScheme.primary,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -442,24 +445,29 @@ class _ChatInputState extends State<ChatInput> {
                     title,
                     style: TextStyle(
                       fontSize: 16,
-                      color: theme.colorScheme.onSurface,
+                      color: disabled
+                          ? theme.colorScheme.onSurface.withOpacity(0.38)
+                          : theme.colorScheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: theme.colorScheme.onSurfaceVariant,
+                  if (disabledReason != null)
+                    Text(
+                      disabledReason,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.error,
+                      ),
+                    )
+                  else
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
                 ],
               ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              size: 20,
-              color: theme.colorScheme.onSurfaceVariant,
             ),
           ],
         ),
