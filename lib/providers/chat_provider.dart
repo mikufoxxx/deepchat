@@ -205,6 +205,9 @@ class ChatProvider with ChangeNotifier {
       
       _addMessage(userMessage);
       
+      // 发送消息后清空上传列表
+      _uploadedItems.clear();
+      
       // 使用完整内容发送请求
       var thoughtProcess = '';
       var response = '';
