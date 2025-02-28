@@ -518,7 +518,7 @@ class ChatProvider with ChangeNotifier {
       await for (final chunk in _apiService.getChatCompletionStream(
         titleMessages,
         _siliconflowApiKey,
-        0.3,
+        0.5,
       )) {
         if (!chunk.startsWith('思考过程：')) {
           title += chunk;
