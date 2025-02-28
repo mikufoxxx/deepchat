@@ -44,12 +44,14 @@ class ApiService {
         'authorization': 'Bearer $apiKey',
       });
       
+      final messageHistory = messages.map((msg) => {
+        'role': msg.role,
+        'content': msg.content,
+      }).toList();
+      
       final jsonBody = jsonEncode({
         'model': _currentModel,
-        'messages': messages.map((msg) => {
-          'role': msg.role,
-          'content': msg.content,
-        }).toList(),
+        'messages': messageHistory,
         'temperature': temperature,
         'stream': true,
       });

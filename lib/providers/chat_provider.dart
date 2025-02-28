@@ -224,15 +224,19 @@ class ChatProvider with ChangeNotifier {
       final startTime = DateTime.now();
       
       _streamSubscription = _apiService
-          .getChatCompletionStream([
-            ChatMessage(
-              id: 'user_${DateTime.now().millisecondsSinceEpoch}',
-              role: 'user',
-              content: fullContent,
-              sessionId: _currentSessionId,
-              timestamp: DateTime.now(),
-            )
-          ], _siliconflowApiKey, _temperature)
+          .getChatCompletionStream(
+            [...currentMessages, 
+              ChatMessage(
+                id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+                role: 'user',
+                content: fullContent,
+                sessionId: _currentSessionId,
+                timestamp: DateTime.now(),
+              )
+            ],
+            _siliconflowApiKey, 
+            _temperature
+          )
           .listen(
         (chunk) {
           if (DateTime.now().difference(_lastNotifyTime).inMilliseconds > 100) {
