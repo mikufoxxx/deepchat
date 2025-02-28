@@ -499,7 +499,7 @@ class ChatProvider with ChangeNotifier {
       ChatMessage(
         id: 'system_${DateTime.now().millisecondsSinceEpoch}',
         role: 'system',
-        content: '请根据用户的问题和AI的回答生成一个简短的对话主题（不超过15个字）。不要加引号，不要解释。',
+        content: '请根据用户的问题和AI的回答生成一个对话标题（不超过15个字），直接返回标题内容，前面不要加对话主题：这种，直接返回标题就行，不要添加任何解释，注释，说明或标点符号。',
         sessionId: _currentSessionId,
         timestamp: DateTime.now(),
       ),
@@ -528,10 +528,15 @@ class ChatProvider with ChangeNotifier {
       // 恢复原来的模型设置
       _apiService.updateModel(originalModel);
       
+      // 如果生成的标题为空，使用默认标题
+      final finalTitle = title.trim().isEmpty ? '日常对话交流' : title.trim();
+      
       // 更新会话标题
-      renameSession(_currentSessionId, title.trim());
+      renameSession(_currentSessionId, finalTitle);
     } catch (e) {
       print('生成标题失败: $e');
+      // 发生错误时使用默认标题
+      renameSession(_currentSessionId, '日常对话交流');
     }
   }
 

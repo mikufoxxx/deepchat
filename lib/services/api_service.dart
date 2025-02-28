@@ -114,8 +114,8 @@ class ApiService {
         'model': ApiConfig.models['siliconflow'],
         'messages': [
           {
-            'role': 'system',
-            'content': '请根据用户的问题和AI的回答生成一个简短的对话主题（不超过15个字），直接返回主题文本，不要添加任何解释或标点符号。',
+            'role': 'user',
+            'content': '请根据用户的问题和AI的回答生成一个对话标题（不超过15个字），直接返回标题内容，前面不要加对话主题：这种，直接返回标题就行，不要添加任何解释，注释，说明或标点符号。',
           },
           ...messages.map((msg) => {
             'role': msg.role,
@@ -182,7 +182,7 @@ class ApiService {
       }
     } catch (e) {
       print('获取用户信息错误: $e');
-      throw Exception('获取用户信息失败，请检查网络连接');
+      throw Exception('获取用户信息失败，请检查网络连接或api设置');
     } finally {
       client.close();
     }
