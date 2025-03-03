@@ -499,7 +499,7 @@ class ChatProvider with ChangeNotifier {
       ChatMessage(
         id: 'system_${DateTime.now().millisecondsSinceEpoch}',
         role: 'system',
-        content: '请根据用户的问题和AI的回答生成一个对话主题（不超过15个字），直接返回标题就行，不要添加任何解释，注释，说明或标点符号，也不要markdown，就纯文本就行。',
+        content: '请根据用户的问题和AI的回答生成一个对话主题（不超过10个字不超过10个字不超过10个字），直接返回标题就行，不要添加任何解释，注释，说明或标点符号，也不要markdown，就纯文本就行。',
         sessionId: _currentSessionId,
         timestamp: DateTime.now(),
       ),
