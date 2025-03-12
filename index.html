@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepChat - 基于 DeepSeek 的聊天应用</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #a6c0fe 0%, #f68084 100%);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .screenshots {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+
+        .screenshots img {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .download-section {
+            text-align: center;
+            margin: 60px 0;
+        }
+
+        .download-button {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+
+        .download-button:hover {
+            background: #45a049;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #333;
+            color: white;
+        }
+
+        .version-info {
+            margin-top: 10px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>DeepChat</h1>
+        <p>基于 DeepSeek 的智能聊天应用</p>
+    </div>
+
+    <div class="container">
+        <section class="features">
+            <div class="feature-card">
+                <h3>🌓 深浅主题</h3>
+                <p>支持浅色/深色主题切换，可跟随系统或手动设置</p>
+            </div>
+            <div class="feature-card">
+                <h3>🎨 主题定制</h3>
+                <p>支持自定义主题色，打造专属聊天界面</p>
+            </div>
+            <div class="feature-card">
+                <h3>💬 多会话</h3>
+                <p>支持创建多个聊天会话，便于管理不同话题</p>
+            </div>
+            <div class="feature-card">
+                <h3>⭐ 消息收藏</h3>
+                <p>支持收藏重要消息，随时查看</p>
+            </div>
+            <div class="feature-card">
+                <h3>🔄 流式响应</h3>
+                <p>实时流式对话，快速响应</p>
+            </div>
+            <div class="feature-card">
+                <h3>📝 Markdown</h3>
+                <p>支持 Markdown 渲染，代码高亮显示</p>
+            </div>
+        </section>
+
+        <section class="download-section">
+            <h2>立即下载</h2>
+            <div class="download-buttons">
+                <a href="downloads/deepchat.apk" class="download-button">
+                    Android 下载
+                </a>
+                <a href="#" class="download-button" style="background: #999;" onclick="return false;">
+                    iOS 即将推出
+                </a>
+            </div>
+            <p class="version-info">当前版本：1.0.0</p>
+        </section>
+    </div>
+
+    <footer>
+        <p>© 2024 DeepChat by 狐狸ox</p>
+        <p><a href="https://github.com/mikufoxxx/deepchat" style="color: white;">GitHub</a></p>
+    </footer>
+</body>
+</html>
