@@ -57,7 +57,7 @@ class ChatScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.model_training),
-            onPressed: () => _showModelSelectionDialog(context),
+            onPressed: () => _showModelSelector(context),
           ),
           IconButton(
             icon: const Icon(Icons.settings),
@@ -98,10 +98,8 @@ class ChatScreen extends StatelessWidget {
     );
   }
 
-
-  void _showModelSelectionDialog(BuildContext context) {
+  void _showModelSelector(BuildContext context) {
     final theme = Theme.of(context);
-    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -113,34 +111,35 @@ class ChatScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                title: Wrap(
-                  spacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    const Text('DeepSeek 官方 API'),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.errorContainer,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '暂不可用',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onErrorContainer,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                title: const Text('DeepSeek 官方 API'),
                 leading: Radio<String>(
                   value: 'deepseek',
                   groupValue: context.watch<ChatProvider>().selectedModel,
-                  onChanged: null,
+                  onChanged: (value) {
+                    try {
+                      context.read<ChatProvider>().setModel(value!);
+                      Navigator.pop(context);
+                    } catch (e) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(e.toString()),
+                          behavior: SnackBarBehavior.floating,
+                          action: SnackBarAction(
+                            label: '去设置',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingsScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    }
+                  },
                 ),
               ),
               const Divider(height: 1),
@@ -195,4 +194,5 @@ class ChatScreen extends StatelessWidget {
       ),
     );
   }
-} 
+
+}

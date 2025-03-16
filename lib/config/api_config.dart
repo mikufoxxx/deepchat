@@ -5,11 +5,16 @@ class ApiConfig {
   
   // 模型配置
   static const Map<String, String> models = {
+    // 硅基流动模型
     'deepseek_v3': 'deepseek-ai/DeepSeek-V3',
     'deepseek_v3_pro': 'Pro/deepseek-ai/DeepSeek-V3',
     'deepseek_r1': 'deepseek-ai/DeepSeek-R1',
     'deepseek_r1_pro': 'Pro/deepseek-ai/DeepSeek-R1',
     'siliconflow': 'deepseek-ai/DeepSeek-V3',
+    
+    // DeepSeek 官方模型
+    'deepseek_chat': 'deepseek-chat',      // DeepSeek-V3
+    'deepseek_reasoner': 'deepseek-reasoner'  // DeepSeek-R1
   };
   
   // API 相关配置

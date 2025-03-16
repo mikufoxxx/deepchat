@@ -14,9 +14,11 @@ import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../config/api_config.dart';
 import '../models/user_info.dart';
+import '../services/deepseek_api_service.dart';
 
 class ChatProvider with ChangeNotifier {
   late final ApiService _apiService;
+  late final DeepseekApiService _deepseekApiService;
   final StorageService _storage;
   List<ChatSession> _sessions = [];
   int _currentSessionId = 0;
@@ -42,12 +44,16 @@ class ChatProvider with ChangeNotifier {
   UserInfo? _cachedUserInfo;
   bool _isBalanceRefreshing = false;
   List<UploadedItem> _uploadedItems = [];
+  String _currentPlatform = 'siliconflow'; // 'siliconflow' 或 'deepseek'
 
   ChatProvider(this._storage) {
     _apiService = ApiService();
+    _deepseekApiService = DeepseekApiService();
     _loadData();
     _apiService.updateBaseUrl(_baseUrl);
     _apiService.updateModel(currentModel);
+    _deepseekApiService.updateModel(currentDeepseekModel);
+    _deepseekApiService.updateApiKey(_deepseekApiKey);
   }
 
   // Getters
@@ -81,9 +87,18 @@ class ChatProvider with ChangeNotifier {
   void _loadData() async {
     _sessions = _storage.loadSessions();
     _favoriteMessages = _storage.loadFavoriteMessages();
-    _apiKey = await _storage.getApiKey() ?? '';
-    _deepseekApiKey = _apiKey;
-    _siliconflowApiKey = _apiKey;
+    
+    // 分别加载两个平台的 API Key
+    _siliconflowApiKey = await _storage.getSiliconflowApiKey() ?? '';
+    _deepseekApiKey = await _storage.getDeepseekApiKey() ?? '';
+    
+    // 兼容旧版本，如果没有特定平台的 API Key，则使用通用的
+    if (_siliconflowApiKey.isEmpty || _deepseekApiKey.isEmpty) {
+      _apiKey = await _storage.getApiKey() ?? '';
+      if (_siliconflowApiKey.isEmpty) _siliconflowApiKey = _apiKey;
+      if (_deepseekApiKey.isEmpty) _deepseekApiKey = _apiKey;
+    }
+    
     _lastUsedModel = await _storage.getLastUsedModel() ?? 'siliconflow';
     _selectedModel = _lastUsedModel;
     
@@ -110,8 +125,14 @@ class ChatProvider with ChangeNotifier {
     _sessions.add(newSession);
     _currentSessionId = newSession.id;
     
+    // 加载平台选择
+    _currentPlatform = await _storage.getCurrentPlatform() ?? 'siliconflow';
+    
+    // 更新两个 API 服务
     _apiService.updateModel(currentModel);
-    _apiService.updateApiKey(_apiKey);
+    _apiService.updateApiKey(_siliconflowApiKey);
+    _deepseekApiService.updateModel(currentDeepseekModel);
+    _deepseekApiService.updateApiKey(_deepseekApiKey);
     
     _saveSessions();
     notifyListeners();
@@ -223,81 +244,161 @@ class ChatProvider with ChangeNotifier {
       var response = '';
       final startTime = DateTime.now();
       
-      _streamSubscription = _apiService
-          .getChatCompletionStream(
-            [...currentMessages, 
-              ChatMessage(
-                id: 'user_${DateTime.now().millisecondsSinceEpoch}',
-                role: 'user',
-                content: fullContent,
+      // 根据当前平台选择不同的 API 服务
+      if (_currentPlatform == 'deepseek') {
+        _streamSubscription = _deepseekApiService
+            .getChatCompletionStream(
+              [...currentMessages, 
+                ChatMessage(
+                  id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+                  role: 'user',
+                  content: fullContent,
+                  sessionId: _currentSessionId,
+                  timestamp: DateTime.now(),
+                )
+              ],
+              _deepseekApiKey, 
+              _temperature
+            )
+            .listen(
+          (chunk) {
+            if (DateTime.now().difference(_lastNotifyTime).inMilliseconds > 100) {
+              notifyListeners();
+              _lastNotifyTime = DateTime.now();
+            }
+            
+            if (chunk.startsWith('思考过程：')) {
+              thoughtProcess += chunk.substring(5);
+              final aiMessage = ChatMessage(
+                id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+                role: 'assistant',
+                content: thoughtProcess,
+                isThinking: true,
                 sessionId: _currentSessionId,
-                timestamp: DateTime.now(),
-              )
-            ],
-            _siliconflowApiKey, 
-            _temperature
-          )
-          .listen(
-        (chunk) {
-          if (DateTime.now().difference(_lastNotifyTime).inMilliseconds > 100) {
+                timestamp: startTime,
+                thoughtProcess: thoughtProcess,
+              );
+              _updateLastMessage(aiMessage);
+            } else if (chunk == '\n\n回答：') {
+              response = '';
+              final aiMessage = ChatMessage(
+                id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+                role: 'assistant',
+                content: '',
+                isThinking: false,
+                sessionId: _currentSessionId,
+                timestamp: startTime,
+                thoughtProcess: thoughtProcess,
+              );
+              _updateLastMessage(aiMessage);
+            } else {
+              response += chunk;
+              final aiMessage = ChatMessage(
+                id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+                role: 'assistant',
+                content: response,
+                isThinking: false,
+                sessionId: _currentSessionId,
+                timestamp: startTime,
+                thoughtProcess: thoughtProcess,
+              );
+              _updateLastMessage(aiMessage);
+            }
+          },
+          onDone: () async {
+            // 标记最后一条消息为完成状态
+            final lastMessage = currentSession?.messages.last;
+            if (lastMessage != null) {
+              _completedMessages[lastMessage.id] = true;
+              notifyListeners();
+            }
+            
+            final session = currentSession;
+            if (session != null && _isFirstRoundComplete(session)) {
+              await _generateTitle(session);
+            }
+            _isResponding = false;
             notifyListeners();
-            _lastNotifyTime = DateTime.now();
-          }
-          
-          if (chunk.startsWith('思考过程：')) {
-            thoughtProcess += chunk.substring(5);
-            final aiMessage = ChatMessage(
-              id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
-              role: 'assistant',
-              content: thoughtProcess,
-              isThinking: true,
-              sessionId: _currentSessionId,
-              timestamp: startTime,
-              thoughtProcess: thoughtProcess,
-            );
-            _updateLastMessage(aiMessage);
-          } else if (chunk == '\n\n回答：') {
-            response = '';
-            final aiMessage = ChatMessage(
-              id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
-              role: 'assistant',
-              content: '',
-              isThinking: false,
-              sessionId: _currentSessionId,
-              timestamp: startTime,
-              thoughtProcess: thoughtProcess,
-            );
-            _updateLastMessage(aiMessage);
-          } else {
-            response += chunk;
-            final aiMessage = ChatMessage(
-              id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
-              role: 'assistant',
-              content: response,
-              isThinking: false,
-              sessionId: _currentSessionId,
-              timestamp: startTime,
-              thoughtProcess: thoughtProcess,
-            );
-            _updateLastMessage(aiMessage);
-          }
-        },
-        onDone: () async {
-          // 标记最后一条消息为完成状态
-          final lastMessage = currentSession?.messages.last;
-          if (lastMessage != null) {
-            _completedMessages[lastMessage.id] = true;
+          },
+        );
+      } else {
+        // 使用硅基流动 API
+        _streamSubscription = _apiService
+            .getChatCompletionStream(
+              [...currentMessages, 
+                ChatMessage(
+                  id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+                  role: 'user',
+                  content: fullContent,
+                  sessionId: _currentSessionId,
+                  timestamp: DateTime.now(),
+                )
+              ],
+              _siliconflowApiKey, 
+              _temperature
+            )
+            .listen(
+          (chunk) {
+            if (DateTime.now().difference(_lastNotifyTime).inMilliseconds > 100) {
+              notifyListeners();
+              _lastNotifyTime = DateTime.now();
+            }
+            
+            if (chunk.startsWith('思考过程：')) {
+              thoughtProcess += chunk.substring(5);
+              final aiMessage = ChatMessage(
+                id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+                role: 'assistant',
+                content: thoughtProcess,
+                isThinking: true,
+                sessionId: _currentSessionId,
+                timestamp: startTime,
+                thoughtProcess: thoughtProcess,
+              );
+              _updateLastMessage(aiMessage);
+            } else if (chunk == '\n\n回答：') {
+              response = '';
+              final aiMessage = ChatMessage(
+                id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+                role: 'assistant',
+                content: '',
+                isThinking: false,
+                sessionId: _currentSessionId,
+                timestamp: startTime,
+                thoughtProcess: thoughtProcess,
+              );
+              _updateLastMessage(aiMessage);
+            } else {
+              response += chunk;
+              final aiMessage = ChatMessage(
+                id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+                role: 'assistant',
+                content: response,
+                isThinking: false,
+                sessionId: _currentSessionId,
+                timestamp: startTime,
+                thoughtProcess: thoughtProcess,
+              );
+              _updateLastMessage(aiMessage);
+            }
+          },
+          onDone: () async {
+            // 标记最后一条消息为完成状态
+            final lastMessage = currentSession?.messages.last;
+            if (lastMessage != null) {
+              _completedMessages[lastMessage.id] = true;
+              notifyListeners();
+            }
+            
+            final session = currentSession;
+            if (session != null && _isFirstRoundComplete(session)) {
+              await _generateTitle(session);
+            }
+            _isResponding = false;
             notifyListeners();
-          }
-          
-          final session = currentSession;
-          if (session != null && _isFirstRoundComplete(session)) {
-            await _generateTitle(session);
-          }
-          _isResponding = false;
-          notifyListeners();
-        },
-      );
+          },
+        );
+      }
     } catch (e) {
       final errorMessage = ChatMessage(
         id: 'error_${DateTime.now().millisecondsSinceEpoch}',
@@ -499,7 +600,7 @@ class ChatProvider with ChangeNotifier {
       ChatMessage(
         id: 'system_${DateTime.now().millisecondsSinceEpoch}',
         role: 'system',
-        content: '请根据用户的问题和AI的回答生成一个对话主题（不超过10个字），直接返回标题就行，不要添加任何解释，注释，说明或标点符号，也不要markdown，就纯文本就行。',
+        content: '请根据用户的问题和AI的回答生成一个对话主题（不超过10个字）。',
         sessionId: _currentSessionId,
         timestamp: DateTime.now(),
       ),
@@ -509,24 +610,46 @@ class ChatProvider with ChangeNotifier {
 
     try {
       var title = '';
-      // 临时保存当前模型设置
-      final originalModel = _apiService.currentModel;
       
-      // 强制使用标准版 v3 模型
-      _apiService.updateModel(ApiConfig.models['siliconflow']!);
-      
-      await for (final chunk in _apiService.getChatCompletionStream(
-        titleMessages,
-        _siliconflowApiKey,
-        0.5,
-      )) {
-        if (!chunk.startsWith('思考过程：')) {
+      if (_currentPlatform == 'deepseek') {
+        // 使用 DeepSeek 官方 API
+        // 临时保存当前模型设置
+        final originalModel = _deepseekApiService.currentModel;
+        
+        // 强制使用 deepseek-chat 模型 (V3)
+        _deepseekApiService.updateModel(ApiConfig.models['deepseek_chat']!);
+        
+        await for (final chunk in _deepseekApiService.getChatCompletionStream(
+          titleMessages,
+          _deepseekApiKey,
+          0.5,
+        )) {
           title += chunk;
         }
+        
+        // 恢复原来的模型设置
+        _deepseekApiService.updateModel(originalModel);
+      } else {
+        // 使用硅基流动 API
+        // 临时保存当前模型设置
+        final originalModel = _apiService.currentModel;
+        
+        // 强制使用标准版 v3 模型
+        _apiService.updateModel(ApiConfig.models['deepseek_v3']!);
+        
+        await for (final chunk in _apiService.getChatCompletionStream(
+          titleMessages,
+          _siliconflowApiKey,
+          0.5,
+        )) {
+          if (!chunk.startsWith('思考过程：')) {
+            title += chunk;
+          }
+        }
+        
+        // 恢复原来的模型设置
+        _apiService.updateModel(originalModel);
       }
-      
-      // 恢复原来的模型设置
-      _apiService.updateModel(originalModel);
       
       // 如果生成的标题为空，使用默认标题
       final finalTitle = title.trim().isEmpty ? '日常对话交流' : title.trim();
@@ -578,21 +701,35 @@ class ChatProvider with ChangeNotifier {
   String get deepseekApiKey => _deepseekApiKey;
   String get siliconflowApiKey => _siliconflowApiKey;
   
-  void updateDeepseekApiKey(String key) {
-    _deepseekApiKey = key;
-    if (_selectedModel == 'deepseek') {
-      _apiService.updateApiKey(key);
+  void updateDeepseekApiKey(String apiKey, {bool saveToStorage = true}) {
+    _deepseekApiKey = apiKey;
+    
+    // 只有在需要保存到存储时才执行保存操作
+    if (saveToStorage) {
+      _storage.saveDeepseekApiKey(apiKey);
     }
-    _storage.saveApiKey(key);
+    
+    // 如果当前平台是 DeepSeek，则更新 API 服务的 API Key
+    if (_currentPlatform == 'deepseek') {
+      _deepseekApiService.updateApiKey(apiKey);
+    }
+    
     notifyListeners();
   }
   
-  void updateSiliconflowApiKey(String key) {
-    _siliconflowApiKey = key;
-    if (_selectedModel == 'siliconflow') {
-      _apiService.updateApiKey(key);
+  void updateSiliconflowApiKey(String apiKey, {bool saveToStorage = true}) {
+    _siliconflowApiKey = apiKey;
+    
+    // 只有在需要保存到存储时才执行保存操作
+    if (saveToStorage) {
+      _storage.saveSiliconflowApiKey(apiKey);
     }
-    _storage.saveApiKey(key);
+    
+    // 如果当前平台是硅基流动，则更新 API 服务的 API Key
+    if (_currentPlatform == 'siliconflow') {
+      _apiService.updateApiKey(apiKey);
+    }
+    
     notifyListeners();
   }
 
@@ -655,18 +792,29 @@ class ChatProvider with ChangeNotifier {
       return _cachedUserInfo!;
     }
     
-    if (_siliconflowApiKey.isEmpty) {
-      throw Exception('请先配置 API Key');
+    if (_currentPlatform == 'deepseek' && _deepseekApiKey.isEmpty) {
+      throw Exception('请先配置 DeepSeek API Key');
+    } else if (_currentPlatform == 'siliconflow' && _siliconflowApiKey.isEmpty) {
+      throw Exception('请先配置硅基流动 API Key');
     }
     
     _isBalanceRefreshing = true;
+    notifyListeners();
     
     try {
-      _cachedUserInfo = await _apiService.getUserInfo();
+      if (_currentPlatform == 'deepseek') {
+        // 确保使用最新的 DeepSeek API Key
+        _deepseekApiService.updateApiKey(_deepseekApiKey);
+        _cachedUserInfo = await _deepseekApiService.getUserInfo();
+      } else {
+        // 确保使用最新的硅基流动 API Key
+        _apiService.updateApiKey(_siliconflowApiKey);
+        _cachedUserInfo = await _apiService.getUserInfo();
+      }
       return _cachedUserInfo!;
     } finally {
       _isBalanceRefreshing = false;
-      notifyListeners();  // 只在最后通知一次
+      notifyListeners();
     }
   }
 
@@ -674,10 +822,12 @@ class ChatProvider with ChangeNotifier {
   String get modelVersion => _modelVersion;
   
   void togglePro() {
-    if (!canInteract) {
+    // 如果正在响应或者当前平台是 DeepSeek 官方 API，则不允许切换
+    if (!canInteract || _currentPlatform == 'deepseek') {
       notifyListeners();
       return;
     }
+    
     _isPro = !_isPro;
     _storage.saveIsPro(_isPro);  // 保存设置
     _apiService.updateModel(currentModel);
@@ -839,5 +989,27 @@ class ChatProvider with ChangeNotifier {
     
     _saveSessions();
     notifyListeners();
+  }
+
+  String get currentPlatform => _currentPlatform;
+  String get currentDeepseekModel => _isDeepThinking 
+      ? ApiConfig.models['deepseek_reasoner'] ?? 'deepseek-reasoner'  // 深度思考模式使用 R1
+      : ApiConfig.models['deepseek_chat'] ?? 'deepseek-chat';         // 普通模式使用 V3
+  
+  void setPlatform(String platform) {
+    if (_currentPlatform != platform) {
+      _currentPlatform = platform;
+      _cachedUserInfo = null; // 清除缓存的用户信息
+      
+      // 根据平台更新 API 服务的 API Key
+      if (platform == 'siliconflow') {
+        _apiService.updateApiKey(_siliconflowApiKey);
+      } else if (platform == 'deepseek') {
+        _deepseekApiService.updateApiKey(_deepseekApiKey);
+      }
+      
+      _storage.saveCurrentPlatform(platform);
+      notifyListeners();
+    }
   }
 }

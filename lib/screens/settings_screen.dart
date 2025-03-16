@@ -358,6 +358,8 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> with SingleTickerP
   late AnimationController _controller;
   late List<Animation<double>> _animations;
   Future<UserInfo>? _userInfoFuture;
+  final _siliconflowApiKeyController = TextEditingController();
+  final _deepseekApiKeyController = TextEditingController();
 
   @override
   void initState() {
@@ -390,6 +392,8 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> with SingleTickerP
   @override
   void dispose() {
     _controller.dispose();
+    _siliconflowApiKeyController.dispose();
+    _deepseekApiKeyController.dispose();
     super.dispose();
   }
 
@@ -493,89 +497,290 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> with SingleTickerP
     final provider = context.read<ChatProvider>();
     _userInfoFuture ??= provider.getUserInfo();
 
-    return FutureBuilder<UserInfo>(
-      future: _userInfoFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting || provider.isBalanceRefreshing) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        
-        if (snapshot.hasError) {
-          return Column(
-            children: [
-              _buildApiKeyInput(context, provider, Theme.of(context)),
-              const SizedBox(height: 16),
-              Center(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildPlatformSelector(context, provider, Theme.of(context)),
+        const SizedBox(height: 16),
+        _buildApiKeyInput(context, provider, Theme.of(context)),
+        const SizedBox(height: 16),
+        FutureBuilder<UserInfo>(
+          future: _userInfoFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting || provider.isBalanceRefreshing) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            if (snapshot.hasError) {
+              return Center(
                 child: Text(
                   '获取用户信息失败: ${snapshot.error}',
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
-              ),
-            ],
-          );
-        }
+              );
+            }
 
-        final userInfo = snapshot.data!;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildApiKeyInput(context, provider, Theme.of(context)),
-            const SizedBox(height: 16),
-            _buildBalanceInfo(userInfo, Theme.of(context)),
-          ],
-        );
-      },
+            final userInfo = snapshot.data!;
+            return _buildBalanceInfo(userInfo, Theme.of(context));
+          },
+        ),
+      ],
     );
   }
 
-  Widget _buildApiKeyInput(BuildContext context, ChatProvider provider, ThemeData theme) {
+  Widget _buildPlatformSelector(BuildContext context, ChatProvider provider, ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '硅基流动 API Key',
+          'API 平台选择',
           style: TextStyle(
             fontSize: 14,
             color: theme.colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Icon(
-              Icons.info_outline,
-              size: 14,
-              color: theme.colorScheme.primary,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '在 docs.siliconflow.cn 获取',
-              style: TextStyle(
-                fontSize: 12,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-          ],
-        ),
         const SizedBox(height: 8),
-        TextField(
-          controller: TextEditingController(text: provider.siliconflowApiKey),
-          onChanged: (value) => _saveApiKey(context, value, true),
-          decoration: InputDecoration(
-            hintText: 'sk-xxxxxx',
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(8),
           ),
-          style: const TextStyle(fontSize: 14),
+          child: Column(
+            children: [
+              RadioListTile<String>(
+                title: const Text('硅基流动 API'),
+                subtitle: const Text('推荐使用'),
+                value: 'siliconflow',
+                groupValue: provider.currentPlatform,
+                onChanged: (value) {
+                  if (provider.siliconflowApiKey.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('请先设置硅基流动 API Key')),
+                    );
+                    return;
+                  }
+                  
+                  provider.setPlatform(value!);
+                  // 刷新用户信息
+                  setState(() {
+                    _userInfoFuture = provider.getUserInfo(forceRefresh: true);
+                  });
+                },
+                dense: true,
+              ),
+              RadioListTile<String>(
+                title: Wrap(
+                  spacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    const Text('DeepSeek 官方 API'),
+                    if (provider.deepseekApiKey.isEmpty)
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.errorContainer,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '未设置',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Theme.of(context).colorScheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                value: 'deepseek',
+                groupValue: provider.currentPlatform,
+                onChanged: (value) {
+                  if (provider.deepseekApiKey.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('请先设置 DeepSeek API Key')),
+                    );
+                    return;
+                  }
+                  
+                  provider.setPlatform(value!);
+                  // 刷新用户信息
+                  setState(() {
+                    _userInfoFuture = provider.getUserInfo(forceRefresh: true);
+                  });
+                },
+                dense: true,
+              ),
+            ],
+          ),
         ),
       ],
     );
+  }
+
+  Widget _buildApiKeyInput(BuildContext context, ChatProvider provider, ThemeData theme) {
+    // 根据当前平台选择合适的 API Key 输入组件
+    if (provider.currentPlatform == 'siliconflow') {
+      // 使用硅基流动的 API Key 控制器
+      _siliconflowApiKeyController.text = provider.siliconflowApiKey;
+      return _buildPlatformApiKeyInput(
+        context,
+        '硅基流动 API Key',
+        _siliconflowApiKeyController,
+        theme,
+        true, // isSiliconflow = true
+      );
+    } else if (provider.currentPlatform == 'deepseek') {
+      // 使用 DeepSeek 的 API Key 控制器
+      _deepseekApiKeyController.text = provider.deepseekApiKey;
+      return _buildPlatformApiKeyInput(
+        context,
+        'DeepSeek API Key',
+        _deepseekApiKeyController,
+        theme,
+        false, // isSiliconflow = false
+      );
+    } else {
+      return Container();
+    }
+  }
+
+  Widget _buildPlatformApiKeyInput(
+    BuildContext context,
+    String label,
+    TextEditingController controller,
+    ThemeData theme,
+    bool isSiliconflow,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: '请输入 API Key',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+            suffixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.check_circle_outline),
+                  tooltip: '验证 API Key',
+                  onPressed: () async {
+                    if (controller.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('API Key 不能为空')),
+                      );
+                      return;
+                    }
+                    
+                    // 显示加载指示器
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('正在验证 API Key...'), duration: Duration(seconds: 1)),
+                    );
+                    
+                    try {
+                      final provider = context.read<ChatProvider>();
+                      // 临时更新 API Key 进行验证
+                      if (isSiliconflow) {
+                        provider.updateSiliconflowApiKey(controller.text, saveToStorage: false);
+                      } else {
+                        provider.updateDeepseekApiKey(controller.text, saveToStorage: false);
+                      }
+                      
+                      // 尝试获取用户信息来验证 API Key
+                      await provider.getUserInfo(forceRefresh: true);
+                      
+                      // 验证成功，保存 API Key
+                      if (isSiliconflow) {
+                        provider.updateSiliconflowApiKey(controller.text);
+                      } else {
+                        provider.updateDeepseekApiKey(controller.text);
+                      }
+                      
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('API Key 验证成功并已保存')),
+                      );
+                      
+                      // 刷新用户信息显示
+                      setState(() {
+                        _userInfoFuture = provider.getUserInfo(forceRefresh: true);
+                      });
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('API Key 验证失败: ${e.toString()}'),
+                          backgroundColor: theme.colorScheme.error,
+                        ),
+                      );
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.save),
+                  tooltip: '保存 API Key',
+                  onPressed: () {
+                    if (controller.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('API Key 不能为空')),
+                      );
+                      return;
+                    }
+                    _saveApiKey(context, controller.text, isSiliconflow);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('API Key 已保存')),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          obscureText: true,
+          enableSuggestions: false,
+          autocorrect: false,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          isSiliconflow 
+              ? '硅基流动 API Key 格式: sf-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' 
+              : 'DeepSeek API Key 格式: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+          style: TextStyle(
+            fontSize: 12,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _saveApiKey(BuildContext context, String key, bool isSiliconflow) {
+    final provider = context.read<ChatProvider>();
+    
+    if (isSiliconflow) {
+      provider.updateSiliconflowApiKey(key);
+    } else {
+      provider.updateDeepseekApiKey(key);
+    }
+
+    // 刷新用户信息
+    setState(() {
+      _userInfoFuture = provider.getUserInfo(forceRefresh: true);
+    });
+
+    // 强制刷新对话页面
+    provider.refreshCurrentSession();
   }
 
   Widget _buildTemperatureSlider(BuildContext context) {
@@ -938,19 +1143,6 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> with SingleTickerP
         ],
       ),
     );
-  }
-
-  void _saveApiKey(BuildContext context, String key, bool isSiliconflow) {
-    final provider = context.read<ChatProvider>();
-    
-    if (isSiliconflow) {
-      provider.updateSiliconflowApiKey(key);
-    } else {
-      provider.updateDeepseekApiKey(key);
-    }
-
-    // 强制刷新对话页面
-    provider.refreshCurrentSession();
   }
 }
 

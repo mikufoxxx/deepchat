@@ -13,6 +13,7 @@ class StorageService {
   static const String _isDeepThinkingKey = 'is_deep_thinking';
   static const String _isProKey = 'is_pro';
   static const String _documentContextKey = 'document_context';
+  static const String _currentPlatformKey = 'current_platform';
 
   final SharedPreferences _prefs;
 
@@ -125,5 +126,33 @@ class StorageService {
       print('加载文档上下文失败: $e');
       return [];
     }
+  }
+
+  Future<void> saveCurrentPlatform(String platform) async {
+    await _prefs.setString(_currentPlatformKey, platform);
+  }
+
+  Future<String?> getCurrentPlatform() async {
+    return _prefs.getString(_currentPlatformKey);
+  }
+
+  // 获取硅基流动 API Key
+  Future<String?> getSiliconflowApiKey() async {
+    return _prefs.getString('siliconflow_api_key');
+  }
+
+  // 保存硅基流动 API Key
+  Future<void> saveSiliconflowApiKey(String apiKey) async {
+    await _prefs.setString('siliconflow_api_key', apiKey);
+  }
+
+  // 获取 DeepSeek API Key
+  Future<String?> getDeepseekApiKey() async {
+    return _prefs.getString('deepseek_api_key');
+  }
+
+  // 保存 DeepSeek API Key
+  Future<void> saveDeepseekApiKey(String apiKey) async {
+    await _prefs.setString('deepseek_api_key', apiKey);
   }
 } 
