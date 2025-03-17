@@ -30,7 +30,7 @@ class DeepseekApiService {
     double temperature,
   ) async* {
     final endpoint = '$_baseUrl/v1/chat/completions';
-    bool isThinking = false;
+    bool isThinking = false;  // 标记是否在输出思考内容
     
     try {
       final request = http.Request('POST', Uri.parse(endpoint));
@@ -40,14 +40,47 @@ class DeepseekApiService {
         'authorization': 'Bearer $apiKey',
       });
       
-      final messageHistory = messages.map((msg) => {
-        'role': msg.role,
-        'content': msg.content,
-      }).toList();
+      // 处理消息历史，确保用户和助手消息交替出现
+      List<Map<String, String>> processedMessages = [];
+      
+      // 如果使用的是 deepseek-reasoner 模型，需要特殊处理
+      if (_currentModel == 'deepseek-reasoner') {
+        // 确保消息列表不为空
+        if (messages.isNotEmpty) {
+          // 添加第一条消息
+          processedMessages.add({
+            'role': messages.first.role,
+            'content': messages.first.content,
+          });
+          
+          // 处理剩余消息，确保用户和助手消息交替出现
+          for (int i = 1; i < messages.length; i++) {
+            final currentMsg = messages[i];
+            final prevMsg = processedMessages.last;
+            
+            // 如果当前消息和上一条消息的角色相同，则合并内容
+            if (currentMsg.role == prevMsg['role']) {
+              prevMsg['content'] = '${prevMsg['content']}\n\n${currentMsg.content}';
+            } else {
+              // 角色不同，添加为新消息
+              processedMessages.add({
+                'role': currentMsg.role,
+                'content': currentMsg.content,
+              });
+            }
+          }
+        }
+      } else {
+        // 其他模型使用原始消息列表
+        processedMessages = messages.map((msg) => {
+          'role': msg.role,
+          'content': msg.content,
+        }).toList();
+      }
       
       final jsonBody = jsonEncode({
         'model': _currentModel,
-        'messages': messageHistory,
+        'messages': processedMessages,
         'temperature': temperature,
         'stream': true,
       });
@@ -75,10 +108,31 @@ class DeepseekApiService {
           try {
             final data = jsonDecode(line);
             final content = data['choices']?[0]?['delta']?['content'] as String?;
+            final reasoningContent = data['choices']?[0]?['delta']?['reasoning_content'] as String?;
             
+            // 处理思考内容
+            if (reasoningContent != null && reasoningContent.isNotEmpty) {
+              print('DeepSeek 思考内容: $reasoningContent');
+              // 始终添加前缀，让 ChatProvider 能够识别这是思考内容
+              yield '思考过程：$reasoningContent';
+              isThinking = true;  // 标记正在输出思考内容
+              continue;
+            }
+            
+            // 处理回答内容
             if (content != null) {
               print('DeepSeek 回答内容: $content');
-              yield content;
+              
+              // 如果之前在输出思考内容，现在是第一次输出回答内容
+              if (isThinking) {
+                // 先输出分隔符，然后再输出内容
+                yield '\n\n回答：';
+                isThinking = false;  // 重置思考状态
+                yield content;  // 单独输出内容
+              } else {
+                // 继续输出回答内容
+                yield content;
+              }
             }
           } catch (e) {
             print('DeepSeek 解析错误: $e');

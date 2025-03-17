@@ -682,9 +682,26 @@ class ChatProvider with ChangeNotifier {
       return;
     }
     _isDeepThinking = !_isDeepThinking;
-    _modelVersion = _isDeepThinking ? 'r1' : 'v3';
-    _storage.saveIsDeepThinking(_isDeepThinking);  // 保存设置
-    _apiService.updateModel(currentModel);
+    _storage.saveIsDeepThinking(_isDeepThinking);
+    
+    // 如果当前平台是 DeepSeek，则更新模型
+    if (_currentPlatform == 'deepseek') {
+      // 根据深度思考状态选择正确的模型
+      String model = _isDeepThinking 
+          ? ApiConfig.models['deepseek_reasoner'] ?? 'deepseek-reasoner'
+          : ApiConfig.models['deepseek_chat'] ?? 'deepseek-chat';
+      
+      // 更新 DeepSeek API 服务的模型
+      _deepseekApiService.updateModel(model);
+    } else {
+      // 硅基流动平台根据深度思考状态更新模型版本
+      _modelVersion = _isDeepThinking ? 'r1' : 'v3';
+      String? model = _isPro
+          ? (_modelVersion == 'r1' ? ApiConfig.models['deepseek_r1_pro'] : ApiConfig.models['deepseek_v3_pro'])
+          : (_modelVersion == 'r1' ? ApiConfig.models['deepseek_r1'] : ApiConfig.models['deepseek_v3']);
+      _apiService.updateModel(model!);
+    }
+    
     notifyListeners();
   }
   
@@ -1004,8 +1021,20 @@ class ChatProvider with ChangeNotifier {
       // 根据平台更新 API 服务的 API Key
       if (platform == 'siliconflow') {
         _apiService.updateApiKey(_siliconflowApiKey);
+        
+        // 硅基流动平台使用的模型
+        String? model = _isPro
+            ? (_modelVersion == 'r1' ? ApiConfig.models['deepseek_r1_pro'] : ApiConfig.models['deepseek_v3_pro'])
+            : (_modelVersion == 'r1' ? ApiConfig.models['deepseek_r1'] : ApiConfig.models['deepseek_v3']);
+        _apiService.updateModel(model!);
       } else if (platform == 'deepseek') {
         _deepseekApiService.updateApiKey(_deepseekApiKey);
+        
+        // DeepSeek 平台根据深度思考状态选择模型
+        String model = _isDeepThinking 
+            ? ApiConfig.models['deepseek_reasoner'] ?? 'deepseek-reasoner'
+            : ApiConfig.models['deepseek_chat'] ?? 'deepseek-chat';
+        _deepseekApiService.updateModel(model);
       }
       
       _storage.saveCurrentPlatform(platform);
