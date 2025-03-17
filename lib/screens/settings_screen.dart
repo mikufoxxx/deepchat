@@ -546,6 +546,10 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> with SingleTickerP
                 onChanged: (value) {
                   if (value != null) {
                     provider.setPlatform(value);
+                    // 切换平台后刷新用户信息
+                    setState(() {
+                      _userInfoFuture = provider.getUserInfo(forceRefresh: true);
+                    });
                   }
                 },
               ),
@@ -558,6 +562,10 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> with SingleTickerP
                 onChanged: (value) {
                   if (value != null) {
                     provider.setPlatform(value);
+                    // 切换平台后刷新用户信息
+                    setState(() {
+                      _userInfoFuture = provider.getUserInfo(forceRefresh: true);
+                    });
                   }
                 },
               ),

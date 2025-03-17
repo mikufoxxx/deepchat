@@ -1016,14 +1016,14 @@ class ChatProvider with ChangeNotifier {
   void setPlatform(String platform) {
     if (_currentPlatform != platform) {
       _currentPlatform = platform;
-      _cachedUserInfo = null; // 清除缓存的用户信息
       
-      // 根据平台更新 API 服务的 API Key
+      // 更新 API 服务配置
       if (platform == 'siliconflow') {
+        _apiService.updateBaseUrl(ApiConfig.siliconFlowUrl);
         _apiService.updateApiKey(_siliconflowApiKey);
         
-        // 硅基流动平台使用的模型
-        String? model = _isPro
+        // 硅基流动平台根据 Pro 模式和模型版本选择模型
+        String? model = _isPro 
             ? (_modelVersion == 'r1' ? ApiConfig.models['deepseek_r1_pro'] : ApiConfig.models['deepseek_v3_pro'])
             : (_modelVersion == 'r1' ? ApiConfig.models['deepseek_r1'] : ApiConfig.models['deepseek_v3']);
         _apiService.updateModel(model!);
@@ -1038,6 +1038,10 @@ class ChatProvider with ChangeNotifier {
       }
       
       _storage.saveCurrentPlatform(platform);
+      
+      // 刷新当前会话，确保界面更新
+      refreshCurrentSession();
+      
       notifyListeners();
     }
   }
