@@ -100,6 +100,8 @@ class ChatScreen extends StatelessWidget {
 
   void _showModelSelector(BuildContext context) {
     final theme = Theme.of(context);
+    final provider = context.read<ChatProvider>();
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -114,11 +116,13 @@ class ChatScreen extends StatelessWidget {
                 title: const Text('DeepSeek 官方 API'),
                 leading: Radio<String>(
                   value: 'deepseek',
-                  groupValue: context.watch<ChatProvider>().selectedModel,
+                  groupValue: provider.currentPlatform,
                   onChanged: (value) {
                     try {
-                      context.read<ChatProvider>().setModel(value!);
-                      Navigator.pop(context);
+                      if (value != null) {
+                        provider.setPlatform(value);
+                        Navigator.pop(context);
+                      }
                     } catch (e) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -154,11 +158,13 @@ class ChatScreen extends StatelessWidget {
                 ),
                 leading: Radio<String>(
                   value: 'siliconflow',
-                  groupValue: context.watch<ChatProvider>().selectedModel,
+                  groupValue: provider.currentPlatform,
                   onChanged: (value) {
                     try {
-                      context.read<ChatProvider>().setModel(value!);
-                      Navigator.pop(context);
+                      if (value != null) {
+                        provider.setPlatform(value);
+                        Navigator.pop(context);
+                      }
                     } catch (e) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(

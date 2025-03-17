@@ -500,7 +500,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> with SingleTickerP
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildPlatformSelector(context, provider, Theme.of(context)),
+        _buildPlatformSelector(context),
         const SizedBox(height: 16),
         _buildApiKeyInput(context, provider, Theme.of(context)),
         const SizedBox(height: 16),
@@ -528,89 +528,41 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> with SingleTickerP
     );
   }
 
-  Widget _buildPlatformSelector(BuildContext context, ChatProvider provider, ThemeData theme) {
+  Widget _buildPlatformSelector(BuildContext context) {
+    final provider = context.watch<ChatProvider>();
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'API 平台选择',
-          style: TextStyle(
-            fontSize: 14,
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            children: [
-              RadioListTile<String>(
-                title: const Text('硅基流动 API'),
-                subtitle: const Text('推荐使用'),
+        Text('选择平台', style: TextStyle(fontWeight: FontWeight.bold)),
+        SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: RadioListTile<String>(
+                title: Text('硅基流动'),
                 value: 'siliconflow',
                 groupValue: provider.currentPlatform,
                 onChanged: (value) {
-                  if (provider.siliconflowApiKey.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('请先设置硅基流动 API Key')),
-                    );
-                    return;
+                  if (value != null) {
+                    provider.setPlatform(value);
                   }
-                  
-                  provider.setPlatform(value!);
-                  // 刷新用户信息
-                  setState(() {
-                    _userInfoFuture = provider.getUserInfo(forceRefresh: true);
-                  });
                 },
-                dense: true,
               ),
-              RadioListTile<String>(
-                title: Wrap(
-                  spacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    const Text('DeepSeek 官方 API'),
-                    if (provider.deepseekApiKey.isEmpty)
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.errorContainer,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          '未设置',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Theme.of(context).colorScheme.onErrorContainer,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+            ),
+            Expanded(
+              child: RadioListTile<String>(
+                title: Text('DeepSeek官方'),
                 value: 'deepseek',
                 groupValue: provider.currentPlatform,
                 onChanged: (value) {
-                  if (provider.deepseekApiKey.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('请先设置 DeepSeek API Key')),
-                    );
-                    return;
+                  if (value != null) {
+                    provider.setPlatform(value);
                   }
-                  
-                  provider.setPlatform(value!);
-                  // 刷新用户信息
-                  setState(() {
-                    _userInfoFuture = provider.getUserInfo(forceRefresh: true);
-                  });
                 },
-                dense: true,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );
