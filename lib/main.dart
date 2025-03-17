@@ -52,6 +52,7 @@ class MyApp extends StatelessWidget {
       builder: (context, themeProvider, child) {
 
         return MaterialApp(
+          debugShowCheckedModeBanner: false,
           title: 'DeepChat',
           theme: ThemeData(
             useMaterial3: true,
