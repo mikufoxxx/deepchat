@@ -114,8 +114,8 @@ class ApiService {
         'model': ApiConfig.models['siliconflow'],
         'messages': [
           {
-            'role': 'user',
-            'content': '请根据用户的问题和AI的回答生成一个对话标题（不超过15个字），直接返回标题内容，前面不要加对话主题：这种，直接返回标题就行，不要添加任何解释，注释，说明或标点符号。',
+            'role': 'system',
+            'content': '你是一个专业的对话标题生成助手。请根据用户对话内容，生成一个简短、具体且有意义的标题，能够准确反映对话的核心主题或问题。标题应该：\n1. 长度不超过10个字\n2. 直接返回标题内容，不要添加"对话主题："等前缀\n3. 不要使用"问候与回应"这类过于笼统的表述\n4. 尽量使用名词短语，避免使用"关于..."、"如何..."等开头\n5. 不要添加任何解释、注释或标点符号',
           },
           ...messages.map((msg) => {
             'role': msg.role,
@@ -142,7 +142,15 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final title = data['choices'][0]['message']['content'].trim();
+        var title = data['choices'][0]['message']['content'].trim();
+        
+        // 处理标题，去除可能的前缀
+        if (title.startsWith('对话主题：')) {
+          title = title.substring('对话主题：'.length);
+        } else if (title.startsWith('标题：')) {
+          title = title.substring('标题：'.length);
+        }
+        
         print('生成的标题: $title');
         return title;
       } else {

@@ -600,7 +600,7 @@ class ChatProvider with ChangeNotifier {
       ChatMessage(
         id: 'system_${DateTime.now().millisecondsSinceEpoch}',
         role: 'system',
-        content: '请根据用户的问题和AI的回答生成一个对话主题（不超过10个字）。',
+        content: '你是一个专业的对话标题生成助手。请根据用户对话内容，生成一个简短、具体且有意义的标题，能够准确反映对话的核心主题或问题。标题应该：\n1. 长度不超过10个字\n2. 直接返回标题内容，不要添加"对话主题："等前缀\n3. 不要使用"问候与回应"这类过于笼统的表述\n4. 尽量使用名词短语，避免使用"关于..."、"如何..."等开头\n5. 不要添加任何解释、注释或标点符号',
         sessionId: _currentSessionId,
         timestamp: DateTime.now(),
       ),
@@ -652,7 +652,12 @@ class ChatProvider with ChangeNotifier {
       }
       
       // 如果生成的标题为空，使用默认标题
-      final finalTitle = title.trim().isEmpty ? '日常对话交流' : title.trim();
+      var finalTitle = title.trim().isEmpty ? '日常对话交流' : title.trim();
+      
+      // 处理标题，去除"对话主题："前缀
+      if (finalTitle.startsWith('对话主题：')) {
+        finalTitle = finalTitle.substring('对话主题：'.length);
+      }
       
       // 更新会话标题
       renameSession(_currentSessionId, finalTitle);

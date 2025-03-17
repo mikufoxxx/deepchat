@@ -81,7 +81,7 @@ class _ChatInputState extends State<ChatInput> {
                           });
                         },
                         decoration: InputDecoration(
-                          hintText: '输入消息...',
+                          hintText: '😽在这里输入消息喵...',
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 8,
@@ -148,48 +148,49 @@ class _ChatInputState extends State<ChatInput> {
                       ),
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () => _showModelSelectionDialog(context),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: provider.isPro 
-                            ? theme.colorScheme.primaryContainer.withOpacity(0.7)
-                            : theme.colorScheme.surfaceVariant.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: provider.isPro
-                              ? theme.colorScheme.primary.withOpacity(0.3)
-                              : theme.colorScheme.outlineVariant.withOpacity(0.2),
+                  if (provider.currentPlatform == 'siliconflow')
+                    GestureDetector(
+                      onTap: () => _showModelSelectionDialog(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
                         ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.model_training,
-                            size: 16,
+                        decoration: BoxDecoration(
+                          color: provider.isPro 
+                              ? theme.colorScheme.primaryContainer.withOpacity(0.7)
+                              : theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
                             color: provider.isPro
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurfaceVariant,
+                                ? theme.colorScheme.primary.withOpacity(0.3)
+                                : theme.colorScheme.outlineVariant.withOpacity(0.2),
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            provider.isPro ? 'Pro' : '标准版',
-                            style: TextStyle(
-                              fontSize: 13,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.model_training,
+                              size: 16,
                               color: provider.isPro
                                   ? theme.colorScheme.primary
                                   : theme.colorScheme.onSurfaceVariant,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            Text(
+                              provider.isPro ? 'Pro' : '标准版',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: provider.isPro
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ],
@@ -486,10 +487,10 @@ class _ChatInputState extends State<ChatInput> {
       if (file != null) {
         final size = await file.length();
         
-        if (size > 10 * 1024 * 1024) {
+        if (size > 15 * 1024 * 1024) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('图片大小不能超过10MB')),
+              const SnackBar(content: Text('图片大小不能超过15MB')),
             );
           }
           return;
@@ -566,10 +567,10 @@ class _ChatInputState extends State<ChatInput> {
       if (file != null) {
         final size = await file.length();
         
-        if (size > 10 * 1024 * 1024) {
+        if (size > 15 * 1024 * 1024) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('文件大小不能超过10MB')),
+              const SnackBar(content: Text('文件大小不能超过15MB')),
             );
           }
           return;

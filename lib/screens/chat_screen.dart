@@ -113,7 +113,14 @@ class ChatScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                title: const Text('DeepSeek 官方 API'),
+                title: const Text('DeepSeek'),
+                subtitle: Text(
+                  '官方平台',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
                 leading: Radio<String>(
                   value: 'deepseek',
                   groupValue: provider.currentPlatform,
@@ -148,9 +155,9 @@ class ChatScreen extends StatelessWidget {
               ),
               const Divider(height: 1),
               ListTile(
-                title: const Text('硅基流动 API'),
+                title: const Text('硅基流动'),
                 subtitle: Text(
-                  '推荐使用',
+                  '第三方平台',
                   style: TextStyle(
                     fontSize: 12,
                     color: theme.colorScheme.primary,
