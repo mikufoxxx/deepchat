@@ -7,9 +7,8 @@
 下一代智能聊天解决方案，融合深度文档分析能力
 
 <p align="center">
-  <img src="https://github.com/mikufoxxx/deepchat/blob/dev/img/chatpage.png" width="250" />
-  <img src="https://github.com/mikufoxxx/deepchat/blob/dev/img/ocr_demo.gif" width="250" />
-  <img src="https://github.com/mikufoxxx/deepchat/blob/dev/img/file_analysis.gif" width="250" />
+  <img src="https://github.com/mikufoxxx/deepchat/blob/dev/img/homepage.png" width="250" />
+  <img src="https://github.com/mikufoxxx/deepchat/blob/dev/img/settingpage.png" width="250" />
 </p>
 
 ## 🌟 核心功能
