@@ -78,11 +78,6 @@ graph TD
     J --> K[PDF解析]
     J --> L[OCR引擎]
 ```
-
-## 📜 开源协议
-
-本项目采用 [MIT License](LICENSE)
-
 ---
 
 **由狐狸ox打造** • [问题反馈](https://github.com/mikufoxxx/deepchat/issues)
